@@ -6,7 +6,8 @@
 <title>阡陌之诗</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a2e1a;color:#e0e0e0;min-height:100vh;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+html{height:100%;width:100%;}
+body{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a2e1a;color:#e0e0e0;overflow:hidden;-webkit-tap-highlight-color:transparent;}
 .page{display:none;width:100%;height:100vh;flex-direction:column;}
 .page.active{display:flex;}
 .login-page{justify-content:center;align-items:center;background:linear-gradient(135deg,#1a2e1a 0%,#2d4a2d 50%,#1a3a1a 100%);}
@@ -30,12 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .login-msg.err{color:#ef4444;}
 .login-msg.ok{color:#4ade80;}
 .login-status{text-align:center;font-size:11px;color:#555;margin-top:16px;}
-.worlds-page{
-    background:#1a2e1a;
-    display:flex;
-    flex-direction:column;
-    height:100vh;
-}
+.worlds-page{background:#1a2e1a;}
 .worlds-header{
     padding:16px;
     text-align:center;
@@ -88,7 +84,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     text-align:center;
 }
 .btn-logout{background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:8px 24px;border-radius:8px;font-size:12px;cursor:pointer;}
-.game-page{background:#12201a;}
+.game-page{background:#12201a;display:flex;flex-direction:column;}
 .game-top{padding:8px 12px;background:rgba(0,0,0,0.3);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
 .game-top-row{display:flex;justify-content:space-between;align-items:center;}
 .game-world-name{font-size:13px;color:#6abf69;font-weight:600;}
@@ -213,7 +209,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <body>
 <div class="page login-page active" id="loginPage">
     <div class="login-box">
-        <h1>🌾 阡陌之诗1.6</h1>
+        <h1>🌾 阡陌之诗1.5</h1>
         <div class="subtitle">种地、采集、交友、交易</div>
         <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符" maxlength="16"></div>
         <div class="form-group"><label>密码</label><input type="password" id="loginPass" placeholder="至少4个字符"></div>
@@ -223,7 +219,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         </div>
         <button class="btn btn-green" onclick="doLogin()">登 入</button>
         <button class="btn btn-ghost" onclick="doRegister()">注册新账号</button>
-        <div class="login-msg" id="loginMsg".worlds-page></div>
+        <div class="login-msg" id="loginMsg"></div>
         <div class="login-status" id="loginStatus">正在连接服务器...</div>
     </div>
 </div>
@@ -386,6 +382,7 @@ function handleMsg(msg) {
             }
             break;
         case 'enter_world_result':
+            console.log('enter_world_result:', msg);
             if (msg.ok) enterGame(msg);
             else alert(msg.msg);
             break;
@@ -595,6 +592,17 @@ function doRegister() { var u = document.getElementById('loginUser').value.trim(
 function doLogout() { username = null; farmId = null; currentWorld = null; playerData = null; clearTimers(); showPage('loginPage'); }
 function showLoginMsg(t, ok) { var e = document.getElementById('loginMsg'); e.textContent = t; e.className = 'login-msg ' + (ok ? 'ok' : 'err'); }
 function updLoginStatus(t, ok) { var e = document.getElementById('loginStatus'); if (e) { e.textContent = t; e.style.color = ok === true ? '#4ade80' : ok === false ? '#ef4444' : '#555'; } }
+
+function showWorldsPage() { 
+    console.log('showWorldsPage called, username:', username);
+    document.getElementById('displayUser').textContent = username; 
+    document.getElementById('displayFarmId').textContent = farmId || '???'; 
+    console.log('about to call showPage with worldsPage');
+    showPage('worldsPage'); 
+    console.log('showPage returned, now calling wsSend');
+    wsSend({ type: 'list_worlds' }); 
+    console.log('wsSend called');
+}
 
 function showPage(id) { document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); }); document.getElementById(id).classList.add('active'); }
 function showWorldsPage() { document.getElementById('displayUser').textContent = username; document.getElementById('displayFarmId').textContent = farmId || '???'; showPage('worldsPage'); wsSend({ type: 'list_worlds' }); }
@@ -1378,4 +1386,3 @@ connectWS();
 </script>
 </body>
 </html>
-
