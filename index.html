@@ -23,7 +23,7 @@ body {
 @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg); opacity: 0.3; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
 
 .container {
-    position: relative; z-index: 1; width: 90%; max-width: 420px;
+    position: relative; z-index: 1; width: 92%; max-width: 420px;
     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
     border-radius: 20px; padding: 40px 28px; backdrop-filter: blur(10px); text-align: center;
     animation: fadeIn 0.8s ease;
@@ -47,22 +47,41 @@ h1 {
 .status-title { font-size: 15px; color: #a5d6a7; margin-bottom: 10px; font-weight: 600; }
 .status-text { font-size: 13px; color: #ccc; line-height: 1.8; }
 
-.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
 .info-item {
     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px; padding: 14px 8px;
+    border-radius: 10px; padding: 14px 6px;
+    min-width: 0;
+    overflow: hidden;
 }
 .info-icon { font-size: 22px; margin-bottom: 4px; }
 .info-label { font-size: 10px; color: #888; margin-bottom: 2px; }
-.info-value { font-size: 13px; color: #a5d6a7; font-weight: 600; }
+.info-value { font-size: 13px; color: #a5d6a7; font-weight: 600; white-space: nowrap; }
 
 .footer { font-size: 11px; color: #555; margin-top: 10px; }
 
-@media (max-width: 400px) {
-    .container { padding: 30px 20px; }
+@media (max-width: 480px) {
+    .container { padding: 28px 16px; width: 94%; }
     h1 { font-size: 24px; }
     .icon { font-size: 56px; }
-    .info-grid { grid-template-columns: 1fr; }
+    .info-grid { gap: 6px; }
+    .info-item { padding: 10px 4px; }
+    .info-icon { font-size: 18px; }
+    .info-label { font-size: 9px; }
+    .info-value { font-size: 11px; }
+    .status-box { padding: 16px 12px; }
+    .status-title { font-size: 14px; }
+    .status-text { font-size: 12px; }
+    .subtitle { font-size: 13px; }
+}
+
+@media (max-width: 340px) {
+    .container { padding: 24px 12px; }
+    h1 { font-size: 20px; }
+    .icon { font-size: 48px; }
+    .info-grid { grid-template-columns: 1fr; gap: 8px; }
+    .info-item { padding: 12px 8px; }
+    .info-value { font-size: 13px; }
 }
 </style>
 </head>
@@ -87,13 +106,13 @@ h1 {
             <div class="info-icon">⏰</div>
             <div class="info-label">预计恢复</div>
             <!-- ★ 改这里 -->
-            <div class="info-value">今晚 23:00</div>
+            <div class="info-value">今晚 23:30</div>
         </div>
         <div class="info-item">
             <div class="info-icon">🕐</div>
             <div class="info-label">维护时长</div>
             <!-- ★ 改这里 -->
-            <div class="info-value">约 3 小时</div>
+            <div class="info-value">约 3.5 小时</div>
         </div>
         <div class="info-item">
             <div class="info-icon">🎮</div>
@@ -124,5 +143,3 @@ for (var i = 0; i < 8; i++) setTimeout(leaf, i * 300);
 </script>
 </body>
 </html>
-
-
