@@ -986,13 +986,18 @@ function renderShopPanel(shop, money) {
     
     var seeds = shop.items.filter(function(it) { return it.type === 'seed'; });
     var fertilizers = shop.items.filter(function(it) { return it.type === 'fertilizer'; });
-    var tools = shop.items.filter(function(it) { 
-        // ★ 过滤水壶：只显示比当前等级高的，且不显示最高等级之后的
+    
+    // ★ 分离水壶和其他工具
+    var waterTools = shop.items.filter(function(it) { 
         if (it.id.startsWith('watering_can_lv')) {
             var level = parseInt(it.id.replace('watering_can_lv', '')) || 0;
-            return level > currentWaterLevel && level <= 5;  // 最多显示到5级
+            return level > currentWaterLevel && level <= 5;
         }
-        return it.type === 'tool';
+        return false;
+    });
+    
+    var otherTools = shop.items.filter(function(it) { 
+        return it.type === 'tool' && !it.id.startsWith('watering_can_lv');
     });
     
     if (seeds.length > 0) {
@@ -1021,21 +1026,34 @@ function renderShopPanel(shop, money) {
             h += '<span class="si-price">💰' + f.price + '</span><button onclick="doBuy(\'' + f.id + '\',1)">购买</button></div>';
         }
     }
-    if (tools.length > 0) {
+    
+    // ★ 显示其他工具（开垦令等）
+    if (otherTools.length > 0) {
+        h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🔨 工具</div>';
+        for (var k = 0; k < otherTools.length; k++) {
+            var t = otherTools[k];
+            h += '<div class="shop-item"><div class="si-info"><div class="si-name">🔨 ' + esc(t.name) + '</div><div class="si-desc">' + esc(t.desc || '') + '</div></div>';
+            h += '<span class="si-price">💰' + t.price + '</span><button onclick="doBuy(\'' + t.id + '\',1)">购买</button></div>';
+        }
+    }
+    
+    // ★ 显示水壶升级
+    if (waterTools.length > 0) {
         h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">💧 水壶升级</div>';
-        for (var k = 0; k < tools.length; k++) {
-            var t = tools[k];
-            var level = parseInt(t.id.replace('watering_can_lv', '')) || 0;
-            var levelText = level === 1 ? '普通' : level === 2 ? '精良' : level === 3 ? '优质' : level === 4 ? '稀有' : '传说';
-            h += '<div class="shop-item"><div class="si-info"><div class="si-name">💧 ' + esc(t.name) + '</div><div class="si-desc">' + esc(t.desc || '') + '</div></div>';
-            h += '<span class="si-price">💰' + t.price + '</span><button onclick="doBuy(\'' + t.id + '\',1)">升级</button></div>';
+        for (var m = 0; m < waterTools.length; m++) {
+            var w = waterTools[m];
+            var level = parseInt(w.id.replace('watering_can_lv', '')) || 0;
+            h += '<div class="shop-item"><div class="si-info"><div class="si-name">💧 ' + esc(w.name) + '</div><div class="si-desc">' + esc(w.desc || '') + '</div></div>';
+            h += '<span class="si-price">💰' + w.price + '</span><button onclick="doBuy(\'' + w.id + '\',1)">升级</button></div>';
         }
         if (currentWaterLevel >= 5) {
             h += '<div style="text-align:center;padding:10px;font-size:12px;color:#fcd34d;background:rgba(252,211,77,0.1);border-radius:8px;margin-top:6px;">🏆 你已拥有最高等级的传说水壶！</div>';
         }
     }
+    
     document.getElementById('shopContent').innerHTML = h;
 }
+
 function doBuy(itemId, count) { 
     doAction('shop_buy', { itemId: itemId, count: count || 1 }); 
     // 购买后延迟刷新商店显示
