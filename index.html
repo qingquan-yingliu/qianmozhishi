@@ -461,14 +461,20 @@ function handleActionResult(msg) {
             if (ok) renderShopPanel(msg.shop, msg.money);
             break;
         case 'shop_buy':
-            if (ok) { 
-                 addActionOk(msg.msg);
-                 // 自动刷新商店显示
-                setTimeout(function() {
-                doAction('shop_list');
-                }, 300);
-           } else addActionFail(msg.msg);
-         break;
+    if (ok) { 
+        addActionOk(msg.msg);
+        // ★ 立即同步所有返回的数据
+        if (msg.money !== undefined && playerData) playerData.money = msg.money;
+        if (msg.waterBoostLevel !== undefined && playerData) playerData.waterBoostLevel = msg.waterBoostLevel;
+        if (msg.seeds && playerData) playerData.seeds = msg.seeds;
+        if (msg.items && playerData) playerData.items = msg.items;
+        if (msg.plots && playerData) playerData.plots = msg.plots;
+        // 重新拉取完整商店数据
+        setTimeout(function() {
+            doAction('shop_list');
+        }, 150);
+    } else addActionFail(msg.msg);
+    break;
         case 'sell_fruit':
             if (ok) { addActionOk(msg.msg); openSell(); } else addActionFail(msg.msg);
             break;
@@ -982,7 +988,7 @@ function renderShopPanel(shop, money) {
     }
     
     // ★ 获取玩家当前水壶等级
-    var currentWaterLevel = playerData ? (playerData.waterBoostLevel || 0) : 0;
+    var currentWaterLevel = (playerData && playerData.waterBoostLevel) ? playerData.waterBoostLevel : 0;
     
     var seeds = shop.items.filter(function(it) { return it.type === 'seed'; });
     var fertilizers = shop.items.filter(function(it) { return it.type === 'fertilizer'; });
@@ -1056,13 +1062,6 @@ function renderShopPanel(shop, money) {
 
 function doBuy(itemId, count) { 
     doAction('shop_buy', { itemId: itemId, count: count || 1 }); 
-    // 购买后延迟刷新商店显示
-    setTimeout(function() {
-        if (playerData) {
-            var moneyEl = document.querySelector('#shopContent > div:first-child');
-            if (moneyEl) moneyEl.textContent = '💰 你的金币: ' + playerData.money;
-        }
-    }, 100);
 }
 
 function openSell() {
