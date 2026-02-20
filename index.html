@@ -390,8 +390,14 @@ function handleMsg(msg) {
         case 'chat': addChatMsg(msg.from, msg.text, msg.channel); break;
         case 'private_msg': addPrivateMsg(msg.from, msg.text); break;
         case 'group_msg': addGroupMsg(msg.groupName, msg.from, msg.text); break;
-        case 'player_online': addSysMsg(msg.username + ' 上线了'); break;
-        case 'player_offline': addSysMsg(msg.username + ' 下线了'); break;
+        case 'player_online': 
+    doAction('friend_list');  // 刷新好友列表以获取最新状态
+    checkAndShowFriendStatus(msg.username, true);
+    break;
+        case 'player_offline': 
+    doAction('friend_list');  // 刷新好友列表以获取最新状态
+    checkAndShowFriendStatus(msg.username, false);
+    break;
         case 'announcement': addAnnounce(msg.text); break;
         case 'world_update': if (msg.announcement) addAnnounce(msg.announcement); break;
         case 'season_update': updSeason(msg.season, msg.weather); break;
@@ -429,6 +435,12 @@ function handleMsg(msg) {
             if (msg.ok) addActionOk(msg.msg || '反馈已提交');
             else addActionFail(msg.msg || '提交失败');
             break;
+       case 'friend_online':
+             addSysMsg('🟢 ' + esc(msg.username) + ' 上线了');
+             break;
+       case 'friend_offline':
+             addSysMsg('⚫ ' + esc(msg.username) + ' 下线了');
+             break;
     }
 }
 
@@ -467,7 +479,21 @@ function handleActionResult(msg) {
     if (msg.hasWaterBoost !== undefined && playerData) playerData.hasWaterBoost = msg.hasWaterBoost;
 
     switch(a) {
-        case 'gather': if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); break;
+        case 'gather': 
+    if (ok) {
+        addActionOk(msg.msg);
+        if (msg.stamina !== undefined && playerData) {
+            playerData.stamina = msg.stamina;
+            updStamina();
+        }
+        // ★ 重新渲染野外面板以显示更新的体力
+        if (document.getElementById('panelWild').classList.contains('show')) {
+            doAction('wild_areas');
+        }
+    } else {
+        addActionFail(msg.msg);
+    }
+    break;
         case 'rest': if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); break;
         case 'plant': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
         case 'water': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
@@ -1359,6 +1385,16 @@ function addChatMsg(from, text, channel, isMe) {
 function addPrivateMsg(from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '🔒 <b>' + esc(from) + '</b> 悄悄对你说: ' + esc(text); appendMsg(div); }
 function addGroupMsg(groupName, from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '💬 [' + esc(groupName) + '] <b>' + esc(from) + '</b>: ' + esc(text); appendMsg(div); }
 function addSysMsg(text) { var d = document.createElement('div'); d.className = 'msg-item msg-system'; d.textContent = text; appendMsg(d); }
+// ★ 只显示好友的上下线
+function checkAndShowFriendStatus(username, isOnline) {
+    if (!playerData) return;
+    var myFd = getFriendData(username);
+    // 检查这个用户是否在我的好友列表中
+    if (myFd && myFd.friends && myFd.friends.includes(username)) {
+        var statusText = isOnline ? '🟢 ' + esc(username) + ' 上线了' : '⚫ ' + esc(username) + ' 下线了';
+        addSysMsg(statusText);
+    }
+}
 function addAnnounce(text) { var d = document.createElement('div'); d.className = 'msg-item msg-announce'; d.innerHTML = '📜 ' + esc(text); appendMsg(d); }
 function addActionOk(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action ok'; d.textContent = text; appendMsg(d); }
 function addActionFail(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action fail'; d.textContent = text; appendMsg(d); }
@@ -1386,4 +1422,3 @@ connectWS();
 </script>
 </body>
 </html>
-
