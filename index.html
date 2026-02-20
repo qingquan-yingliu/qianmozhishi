@@ -60,7 +60,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .stamina-bar .st-val{font-size:11px;color:#ccc;min-width:40px;text-align:right;}
 .money-top{font-size:12px;color:#fcd34d;margin-left:8px;}
 .game-main{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
-.farm-area{padding:10px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
+.farm-area{padding:10px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;max-height:200px;overflow-y:auto;}
 .farm-title{font-size:13px;color:#a5d6a7;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
 .farm-title .farm-id{font-size:11px;color:#666;font-family:monospace;}
 .plots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
@@ -211,7 +211,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
             <span class="st-val" id="staminaVal">100/100</span>
         </div>
     </div>
-    <div class="farm-area" id="farmArea">
+    <div class="farm-area" id="farmArea" style="max-height:200px;overflow-y:auto;flex-shrink:0;">
         <div class="farm-title"><span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ------</span></div>
         <div class="plots-grid" id="plotsGrid"></div>
     </div>
@@ -435,20 +435,20 @@ function handleActionResult(msg) {
         case 'fertilize': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
         case 'harvest': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
         case 'my_farm':
-            if (ok && playerData) {
-                playerData.plots = msg.plots; playerData.seeds = msg.seeds; playerData.fruits = msg.fruits;
-                playerData.items = msg.items; playerData.money = msg.money; playerData.stamina = msg.stamina;
-                playerData.staminaMax = msg.staminaMax; playerData.restCooldown = msg.restCooldown;
-                playerData.farmId = msg.farmId; playerData.hasWaterBoost = msg.hasWaterBoost;
-                // ★ 串门中不刷新农场视图，只更新数据
-                if (!visitingOwner) {
-                    refreshFarm();
-                } else {
-                    updStamina();
-                    updMoney();
-                }
-            }
-            break;
+    if (ok && playerData) {
+        playerData.plots = msg.plots; playerData.seeds = msg.seeds; playerData.fruits = msg.fruits;
+        playerData.items = msg.items; playerData.money = msg.money; playerData.stamina = msg.stamina;
+        playerData.staminaMax = msg.staminaMax; playerData.restCooldown = msg.restCooldown;
+        playerData.farmId = msg.farmId; 
+        playerData.waterBoostLevel = msg.waterBoostLevel || 0;  // ★ 添加这行
+        if (!visitingOwner) {
+            refreshFarm();
+        } else {
+            updStamina();
+            updMoney();
+        }
+    }
+    break;
         case 'inventory':
             if (ok) {
                 playerData.seeds = msg.seeds; playerData.fruits = msg.fruits;
@@ -461,8 +461,14 @@ function handleActionResult(msg) {
             if (ok) renderShopPanel(msg.shop, msg.money);
             break;
         case 'shop_buy':
-            if (ok) { addActionOk(msg.msg); } else addActionFail(msg.msg);
-            break;
+            if (ok) { 
+                 addActionOk(msg.msg);
+                 // 自动刷新商店显示
+                setTimeout(function() {
+                doAction('shop_list');
+                }, 300);
+           } else addActionFail(msg.msg);
+         break;
         case 'sell_fruit':
             if (ok) { addActionOk(msg.msg); openSell(); } else addActionFail(msg.msg);
             break;
@@ -974,9 +980,21 @@ function renderShopPanel(shop, money) {
         document.getElementById('shopContent').innerHTML = h;
         return;
     }
+    
+    // ★ 获取玩家当前水壶等级
+    var currentWaterLevel = playerData ? (playerData.waterBoostLevel || 0) : 0;
+    
     var seeds = shop.items.filter(function(it) { return it.type === 'seed'; });
     var fertilizers = shop.items.filter(function(it) { return it.type === 'fertilizer'; });
-    var tools = shop.items.filter(function(it) { return it.type === 'tool'; });
+    var tools = shop.items.filter(function(it) { 
+        // ★ 过滤水壶：只显示比当前等级高的，且不显示最高等级之后的
+        if (it.id.startsWith('watering_can_lv')) {
+            var level = parseInt(it.id.replace('watering_can_lv', '')) || 0;
+            return level > currentWaterLevel && level <= 5;  // 最多显示到5级
+        }
+        return it.type === 'tool';
+    });
+    
     if (seeds.length > 0) {
         h += '<div style="font-size:12px;color:#a5d6a7;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🌱 种子(一种多收)</div>';
         for (var i = 0; i < seeds.length; i++) {
@@ -1004,16 +1022,30 @@ function renderShopPanel(shop, money) {
         }
     }
     if (tools.length > 0) {
-        h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🔨 工具</div>';
+        h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">💧 水壶升级</div>';
         for (var k = 0; k < tools.length; k++) {
             var t = tools[k];
-            h += '<div class="shop-item"><div class="si-info"><div class="si-name">🔨 ' + esc(t.name) + '</div><div class="si-desc">' + esc(t.desc || '') + '</div></div>';
-            h += '<span class="si-price">💰' + t.price + '</span><button onclick="doBuy(\'' + t.id + '\',1)">购买</button></div>';
+            var level = parseInt(t.id.replace('watering_can_lv', '')) || 0;
+            var levelText = level === 1 ? '普通' : level === 2 ? '精良' : level === 3 ? '优质' : level === 4 ? '稀有' : '传说';
+            h += '<div class="shop-item"><div class="si-info"><div class="si-name">💧 ' + esc(t.name) + '</div><div class="si-desc">' + esc(t.desc || '') + '</div></div>';
+            h += '<span class="si-price">💰' + t.price + '</span><button onclick="doBuy(\'' + t.id + '\',1)">升级</button></div>';
+        }
+        if (currentWaterLevel >= 5) {
+            h += '<div style="text-align:center;padding:10px;font-size:12px;color:#fcd34d;background:rgba(252,211,77,0.1);border-radius:8px;margin-top:6px;">🏆 你已拥有最高等级的传说水壶！</div>';
         }
     }
     document.getElementById('shopContent').innerHTML = h;
 }
-function doBuy(itemId, count) { doAction('shop_buy', { itemId: itemId, count: count || 1 }); }
+function doBuy(itemId, count) { 
+    doAction('shop_buy', { itemId: itemId, count: count || 1 }); 
+    // 购买后延迟刷新商店显示
+    setTimeout(function() {
+        if (playerData) {
+            var moneyEl = document.querySelector('#shopContent > div:first-child');
+            if (moneyEl) moneyEl.textContent = '💰 你的金币: ' + playerData.money;
+        }
+    }, 100);
+}
 
 function openSell() {
     window._pendingSellRender = true;
@@ -1287,3 +1319,5 @@ connectWS();
 </script>
 </body>
 </html>
+
+
