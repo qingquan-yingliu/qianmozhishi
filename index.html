@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>阡陌之诗</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a2e1a;color:#e0e0e0;min-height:100vh;overflow:hidden;-webkit-tap-highlight-color:transparent;}
+.page{display:none;width:100%;height:100vh;flex-direction:column;}
+.page.active{display:flex;}
+.login-page{justify-content:center;align-items:center;background:linear-gradient(135deg,#1a2e1a 0%,#2d4a2d 50%,#1a3a1a 100%);}
+.login-box{width:90%;max-width:360px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px 24px;backdrop-filter:blur(10px);}
+.login-box h1{text-align:center;font-size:28px;margin-bottom:6px;}
+.login-box .subtitle{text-align:center;font-size:13px;color:#888;margin-bottom:24px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;color:#aaa;margin-bottom:4px;padding-left:4px;}
+.form-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:11px 14px;font-size:14px;color:#e0e0e0;outline:none;transition:border-color 0.2s;}
+.form-group input:focus{border-color:#6abf69;}
+.form-group input::placeholder{color:#666;}
+.remember-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-left:4px;}
+.remember-row input[type=checkbox]{width:16px;height:16px;accent-color:#4caf50;cursor:pointer;}
+.remember-row label{font-size:12px;color:#aaa;cursor:pointer;}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn:active{transform:scale(0.97);}
+.btn-green{background:linear-gradient(135deg,#4caf50,#66bb6a);color:#fff;}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.2);color:#ccc;margin-top:8px;}
+.btn-ghost:hover{border-color:#6abf69;color:#6abf69;}
+.login-msg{text-align:center;font-size:12px;margin-top:12px;min-height:18px;}
+.login-msg.err{color:#ef4444;}
+.login-msg.ok{color:#4ade80;}
+.login-status{text-align:center;font-size:11px;color:#555;margin-top:16px;}
+.worlds-page{background:#1a2e1a;}
+.worlds-header{padding:16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+.worlds-header h2{font-size:18px;color:#6abf69;}
+.worlds-header .user-info{font-size:12px;color:#888;margin-top:4px;}
+.worlds-list{flex:1;overflow-y:auto;padding:12px;}
+.world-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;}
+.world-card:hover{border-color:#6abf69;background:rgba(106,191,105,0.08);}
+.world-card h3{font-size:15px;color:#a5d6a7;margin-bottom:4px;}
+.world-card .world-info{font-size:12px;color:#888;display:flex;gap:12px;}
+.world-card .world-info span{display:flex;align-items:center;gap:3px;}
+.world-pw-input{margin-top:10px;display:none;}
+.world-pw-input input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;font-size:13px;color:#e0e0e0;outline:none;}
+.world-pw-input button{margin-top:6px;width:100%;padding:9px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.no-worlds{text-align:center;color:#666;padding:40px 20px;font-size:14px;}
+.worlds-footer{padding:12px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;text-align:center;}
+.btn-logout{background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:8px 24px;border-radius:8px;font-size:12px;cursor:pointer;}
+.game-page{background:#12201a;}
+.game-top{padding:8px 12px;background:rgba(0,0,0,0.3);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
+.game-top-row{display:flex;justify-content:space-between;align-items:center;}
+.game-world-name{font-size:13px;color:#6abf69;font-weight:600;}
+.game-info-right{font-size:11px;color:#888;display:flex;gap:8px;align-items:center;}
+.game-exit-btn{font-size:11px;color:#888;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 10px;cursor:pointer;transition:all 0.2s;}
+.game-exit-btn:hover{color:#ef4444;border-color:#ef4444;}
+.stamina-bar{display:flex;align-items:center;gap:4px;margin-top:5px;}
+.stamina-bar .st-label{font-size:11px;color:#aaa;}
+.stamina-bar .st-track{flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;max-width:120px;}
+.stamina-bar .st-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#4caf50);border-radius:3px;transition:width 0.5s;}
+.stamina-bar .st-val{font-size:11px;color:#ccc;min-width:40px;text-align:right;}
+.money-top{font-size:12px;color:#fcd34d;margin-left:8px;}
+.game-main{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.farm-area{padding:10px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
+.farm-title{font-size:13px;color:#a5d6a7;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.farm-title .farm-id{font-size:11px;color:#666;font-family:monospace;}
+.plots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.plot{background:rgba(139,90,43,0.2);border:1px solid rgba(139,90,43,0.3);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.2s;min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+.plot:hover{border-color:#6abf69;}
+.plot:active{transform:scale(0.96);}
+.plot.empty{border-style:dashed;opacity:0.6;}
+.plot .plot-icon{font-size:24px;display:block;margin-bottom:2px;}
+.plot .plot-name{font-size:11px;color:#ccc;}
+.plot .plot-progress{font-size:10px;color:#888;margin-top:2px;}
+.plot .plot-progress-bar{width:80%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin:3px auto 0;overflow:hidden;}
+.plot .plot-progress-fill{height:100%;background:#4caf50;border-radius:2px;transition:width 1s;}
+.plot.mature{border-color:#fcd34d;background:rgba(252,211,77,0.1);animation:glow 2s infinite alternate;}
+@keyframes glow{from{box-shadow:0 0 4px rgba(252,211,77,0.2);}to{box-shadow:0 0 12px rgba(252,211,77,0.4);}}
+.msg-area{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:5px;}
+.msg-item{font-size:13px;line-height:1.5;animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+.msg-chat{color:#ddd;}
+.msg-chat .chat-name{color:#6abf69;font-weight:600;margin-right:4px;}
+.msg-chat .chat-name.me{color:#fcd34d;}
+.msg-chat .chat-channel{font-size:10px;color:#666;margin-right:4px;}
+.msg-system{color:#888;font-size:12px;text-align:center;padding:3px 0;}
+.msg-announce{background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.2);border-radius:10px;padding:8px 12px;font-size:12px;color:#a5d6a7;text-align:center;}
+.msg-action{color:#aaa;font-size:12px;padding-left:8px;border-left:2px solid rgba(255,255,255,0.1);}
+.msg-action.ok{border-left-color:#4ade80;color:#a7f3d0;}
+.msg-action.fail{border-left-color:#ef4444;color:#fca5a5;}
+.msg-private{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:6px 10px;font-size:12px;color:#c4b5fd;}
+.msg-trade{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 10px;font-size:12px;color:#fcd34d;}
+.msg-trade .trade-btns{margin-top:6px;display:flex;gap:6px;}
+.msg-trade .trade-btns button{padding:4px 12px;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;}
+.msg-trade .trade-btns .t-accept{background:#4caf50;color:#fff;}
+.msg-trade .trade-btns .t-reject{background:#ef4444;color:#fff;}
+.game-bottom{border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;background:rgba(0,0,0,0.2);}
+.nav-bar{display:flex;justify-content:space-around;padding:6px 4px 2px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.nav-btn{text-align:center;padding:4px 2px;cursor:pointer;transition:all 0.2s;flex:1;}
+.nav-btn:active{transform:scale(0.92);}
+.nav-btn .nav-icon{font-size:18px;display:block;}
+.nav-btn .nav-label{font-size:10px;color:#888;margin-top:1px;}
+.nav-btn.active .nav-label{color:#6abf69;}
+.chat-input-row{display:flex;gap:6px;padding:6px 10px 10px;}
+.chat-input-row input{flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:9px 14px;font-size:13px;color:#e0e0e0;outline:none;}
+.chat-input-row input:focus{border-color:#6abf69;}
+.chat-input-row input::placeholder{color:#555;}
+.chat-input-row button{background:#4caf50;color:#fff;border:none;border-radius:20px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+.chat-channel-btn{font-size:11px;color:#888;padding:0 14px 2px;cursor:pointer;}
+.chat-channel-btn:hover{color:#6abf69;}
+.panel-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:50;justify-content:center;align-items:flex-end;}
+.panel-overlay.show{display:flex;}
+.panel-box{width:100%;max-width:500px;max-height:75vh;background:#1e2e22;border-radius:16px 16px 0 0;padding:16px;overflow-y:auto;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.panel-title{font-size:15px;color:#6abf69;font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.panel-close{font-size:20px;color:#888;cursor:pointer;padding:4px 8px;}
+.panel-close:hover{color:#fff;}
+.inv-section{margin-bottom:14px;}
+.inv-section-title{font-size:12px;color:#888;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.inv-item{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.inv-item:hover{border-color:#6abf69;}
+.inv-item .ii-icon{font-size:20px;display:block;margin-bottom:2px;}
+.inv-item .ii-name{font-size:10px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inv-item .ii-count{font-size:10px;color:#888;}
+.inv-empty{text-align:center;color:#555;padding:20px;font-size:12px;grid-column:1/-1;}
+.shop-item{display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;margin-bottom:6px;}
+.shop-item .si-info{flex:1;}
+.shop-item .si-name{font-size:13px;color:#a5d6a7;font-weight:600;}
+.shop-item .si-desc{font-size:11px;color:#888;margin-top:2px;}
+.shop-item .si-price{font-size:12px;color:#fcd34d;margin-right:10px;white-space:nowrap;}
+.shop-item button{padding:6px 14px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;flex-shrink:0;}
+.shop-item button:active{transform:scale(0.95);}
+.wild-area-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;}
+.wild-area-card:hover{border-color:#f59e0b;background:rgba(245,158,11,0.08);}
+.wild-area-card:active{transform:scale(0.98);}
+.wild-area-card .wa-name{font-size:14px;color:#fcd34d;font-weight:600;}
+.wild-area-card .wa-desc{font-size:12px;color:#888;margin-top:3px;}
+.wild-area-card .wa-seeds{font-size:11px;color:#a5d6a7;margin-top:4px;}
+.friend-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;}
+.friend-item .fi-name{color:#a5d6a7;font-weight:600;}
+.friend-item .fi-id{font-size:11px;color:#666;font-family:monospace;margin-left:6px;}
+.friend-item .fi-btns{display:flex;gap:4px;}
+.friend-item .fi-btns button{padding:3px 10px;border:none;border-radius:6px;font-size:11px;cursor:pointer;}
+.friend-req{background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:8px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;}
+.trade-form{display:flex;flex-direction:column;gap:8px;}
+.trade-form label{font-size:11px;color:#888;}
+.trade-form input,.trade-form select{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:9px 12px;font-size:13px;color:#e0e0e0;outline:none;}
+.trade-form input:focus,.trade-form select:focus{border-color:#fcd34d;}
+.trade-form select{appearance:auto;}
+.trade-form button{padding:10px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#1a1a2e;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;}
+.visit-farm-view{text-align:center;padding:10px;}
+.visit-plots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.visit-plot{background:rgba(139,90,43,0.15);border:1px solid rgba(139,90,43,0.2);border-radius:10px;padding:10px 6px;text-align:center;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+.visit-plot .vp-icon{font-size:22px;}
+.visit-plot .vp-name{font-size:10px;color:#ccc;margin-top:2px;}
+.visit-plot .vp-status{font-size:10px;color:#888;}
+.group-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;}
+.group-item .gi-name{color:#67e8f9;font-weight:600;}
+.group-item .gi-info{font-size:11px;color:#888;}
+.sell-item{display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:6px;}
+.sell-item .sl-info{flex:1;}
+.sell-item .sl-name{font-size:13px;color:#a5d6a7;}
+.sell-item .sl-detail{font-size:11px;color:#888;}
+.sell-item button{padding:5px 12px;background:#f59e0b;color:#1a1a2e;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;}
+@media(max-width:360px){
+    .plots-grid{grid-template-columns:repeat(2,1fr);}
+    .inv-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="page login-page active" id="loginPage">
+    <div class="login-box">
+        <h1>🌾 阡陌之诗</h1>
+        <div class="subtitle">种地、采集、交友、交易</div>
+        <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符" maxlength="16"></div>
+        <div class="form-group"><label>密码</label><input type="password" id="loginPass" placeholder="至少4个字符"></div>
+        <div class="remember-row">
+            <input type="checkbox" id="rememberMe">
+            <label for="rememberMe">记住账号，下次免输入</label>
+        </div>
+        <button class="btn btn-green" onclick="doLogin()">登 入</button>
+        <button class="btn btn-ghost" onclick="doRegister()">注册新账号</button>
+        <div class="login-msg" id="loginMsg"></div>
+        <div class="login-status" id="loginStatus">正在连接服务器...</div>
+    </div>
+</div>
+<div class="page worlds-page" id="worldsPage">
+    <div class="worlds-header"><h2>🌾 选择世界</h2><div class="user-info">欢迎，<span id="displayUser"></span>（领地ID: <span id="displayFarmId" style="font-family:monospace;color:#fcd34d;"></span>）</div></div>
+    <div id="globalNoticeBar" style="display:none;padding:8px 16px;background:rgba(76,175,80,0.08);border-bottom:1px solid rgba(76,175,80,0.15);font-size:12px;color:#a5d6a7;line-height:1.6;flex-shrink:0;">
+        <div style="font-size:11px;color:#66bb6a;font-weight:600;margin-bottom:2px;">📜 公告</div>
+        <div id="globalNoticeText" style="white-space:pre-wrap;"></div>
+    </div>
+    <div class="worlds-list" id="worldsList"></div>
+    <div class="worlds-footer"><button class="btn-logout" onclick="doLogout()">退出登录</button></div>
+</div>
+<div class="page game-page" id="gamePage">
+    <div class="game-top">
+        <div class="game-top-row">
+            <span class="game-world-name" id="gameWorldName">世界</span>
+            <div class="game-info-right">
+                <span id="gameSeason">🌸 春</span>
+                <span id="gameWeather">☀️ 晴</span>
+                <span class="money-top" id="moneyTop">💰 0</span>
+                <span class="game-exit-btn" onclick="exitWorld()">🚪 退出</span>
+            </div>
+        </div>
+        <div class="stamina-bar">
+            <span class="st-label">⚡ 体力</span>
+            <div class="st-track"><div class="st-fill" id="staminaFill" style="width:100%"></div></div>
+            <span class="st-val" id="staminaVal">100/100</span>
+        </div>
+    </div>
+    <div class="farm-area" id="farmArea">
+        <div class="farm-title"><span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ------</span></div>
+        <div class="plots-grid" id="plotsGrid"></div>
+    </div>
+    <div class="msg-area" id="msgArea"></div>
+    <div class="game-bottom">
+        <div class="nav-bar">
+            <div class="nav-btn" onclick="openWild()"><span class="nav-icon">🌿</span><span class="nav-label">野外</span></div>
+            <div class="nav-btn" onclick="openVisit()"><span class="nav-icon">🏠</span><span class="nav-label">串门</span></div>
+            <div class="nav-btn" onclick="openInventory()"><span class="nav-icon">🎒</span><span class="nav-label">背包</span></div>
+            <div class="nav-btn" onclick="openShop()"><span class="nav-icon">🏪</span><span class="nav-label">商店</span></div>
+            <div class="nav-btn" onclick="openTrade()"><span class="nav-icon">🤝</span><span class="nav-label">交易</span></div>
+            <div class="nav-btn" onclick="openFriends()"><span class="nav-icon">👥</span><span class="nav-label">好友</span></div>
+            <div class="nav-btn" onclick="openSell()"><span class="nav-icon">💰</span><span class="nav-label">卖出</span></div>
+        </div>
+        <div class="chat-channel-btn" id="chatChannelBtn" onclick="toggleChannel()">📢 世界频道</div>
+        <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="说点什么...">
+            <button onclick="sendChat()">发送</button>
+        </div>
+    </div>
+</div>
+<div class="panel-overlay" id="panelWild"><div class="panel-box"><div class="panel-title">🌿 野外采集 <span class="panel-close" onclick="closePanel('panelWild')">&times;</span></div><div id="wildContent"></div></div></div>
+<div class="panel-overlay" id="panelVisit"><div class="panel-box"><div class="panel-title">🏠 串门 <span class="panel-close" onclick="closePanel('panelVisit')">&times;</span></div><div id="visitContent"></div></div></div>
+<div class="panel-overlay" id="panelInv"><div class="panel-box"><div class="panel-title">🎒 背包 <span class="panel-close" onclick="closePanel('panelInv')">&times;</span></div><div id="invContent"></div></div></div>
+<div class="panel-overlay" id="panelShop"><div class="panel-box"><div class="panel-title">🏪 商店 <span class="panel-close" onclick="closePanel('panelShop')">&times;</span></div><div id="shopContent"></div></div></div>
+<div class="panel-overlay" id="panelTrade"><div class="panel-box"><div class="panel-title">🤝 交易 <span class="panel-close" onclick="closePanel('panelTrade')">&times;</span></div><div id="tradeContent"></div></div></div>
+<div class="panel-overlay" id="panelFriends"><div class="panel-box"><div class="panel-title">👥 好友 <span class="panel-close" onclick="closePanel('panelFriends')">&times;</span></div><div id="friendsContent"></div></div></div>
+<div class="panel-overlay" id="panelSell"><div class="panel-box"><div class="panel-title">💰 卖出果实 <span class="panel-close" onclick="closePanel('panelSell')">&times;</span></div><div id="sellContent"></div></div></div>
+<div class="panel-overlay" id="panelPlotAction"><div class="panel-box"><div class="panel-title">🌱 地块操作 <span class="panel-close" onclick="closePanel('panelPlotAction')">&times;</span></div><div id="plotActionContent"></div></div></div>
+<div class="panel-overlay" id="panelGroups"><div class="panel-box"><div class="panel-title">💬 群聊 <span class="panel-close" onclick="closePanel('panelGroups')">&times;</span></div><div id="groupsContent"></div></div></div>
+
+<script>
+var SERVER_URL = 'ws://39.108.91.161:8081';
+var ws = null, username = null, farmId = null, currentWorld = null, playerData = null;
+var chatChannel = 'world', reconnTimer = null, hbTimer = null;
+var visitingOwner = null, visitingFarmId = null;
+var serverTimeOffset = 0;
+
+// ★ 记住账号
+function loadSavedAccount() {
+    try {
+        var saved = localStorage.getItem('qmzs_account');
+        if (saved) {
+            var data = JSON.parse(saved);
+            if (data.username) document.getElementById('loginUser').value = data.username;
+            if (data.password) document.getElementById('loginPass').value = data.password;
+            document.getElementById('rememberMe').checked = true;
+        }
+    } catch(e) {}
+}
+function saveAccount(u, p) {
+    try {
+        if (document.getElementById('rememberMe').checked) {
+            localStorage.setItem('qmzs_account', JSON.stringify({ username: u, password: p }));
+        } else {
+            localStorage.removeItem('qmzs_account');
+        }
+    } catch(e) {}
+}
+function clearSavedAccount() {
+    try { localStorage.removeItem('qmzs_account'); } catch(e) {}
+}
+
+// ★ 退出世界回到选择界面
+function exitWorld() {
+    if (!confirm('确定退出当前世界？')) return;
+    clearTimers();
+    currentWorld = null;
+    playerData = null;
+    visitingOwner = null;
+    visitingFarmId = null;
+    // 关闭所有面板
+    document.querySelectorAll('.panel-overlay').forEach(function(el) { el.classList.remove('show'); });
+    var vbar = document.getElementById('visitStatusBar');
+    if (vbar) vbar.remove();
+    document.getElementById('msgArea').innerHTML = '';
+    showWorldsPage();
+}
+
+function openFeedbackForm() {
+    var el = document.getElementById('feedbackFormArea');
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function submitFeedback() {
+    var text = (document.getElementById('feedbackText').value || '').trim();
+    if (!text || text.length < 2) { alert('反馈内容至少2个字'); return; }
+    if (text.length > 500) { alert('反馈内容不能超过500字'); return; }
+    wsSend({ type: 'submit_feedback', text: text });
+    document.getElementById('feedbackText').value = '';
+    document.getElementById('feedbackFormArea').style.display = 'none';
+    alert('感谢你的反馈！');
+}
+
+function connectWS() {
+    if (ws && ws.readyState === WebSocket.OPEN) return;
+    updLoginStatus('正在连接服务器...');
+    ws = new WebSocket(SERVER_URL);
+    ws.onopen = function() { updLoginStatus('已连接', true); if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; } startHB(); };
+    ws.onmessage = function(e) { var m; try { m = JSON.parse(e.data); } catch(err) { return; } handleMsg(m); };
+    ws.onerror = function() { updLoginStatus('连接出错', false); };
+    ws.onclose = function() { updLoginStatus('连接断开，重连中...', false); stopHB(); reconnTimer = setTimeout(connectWS, 3000); };
+}
+function wsSend(o) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(o)); }
+function startHB() { stopHB(); hbTimer = setInterval(function() { wsSend({ type: 'heartbeat' }); }, 25000); }
+function stopHB() { if (hbTimer) { clearInterval(hbTimer); hbTimer = null; } }
+function doAction(action, payload) { wsSend({ type: 'action', action: action, payload: payload || {} }); }
+
+function handleMsg(msg) {
+    switch(msg.type) {
+        case 'register_result':
+            showLoginMsg(msg.msg, msg.ok);
+            if (msg.ok && msg.farmId) showLoginMsg(msg.msg + '，你的领地ID: ' + msg.farmId, true);
+            break;
+        case 'login_result':
+            if (msg.ok) {
+                username = msg.username; farmId = msg.farmId;
+                // ★ 登录成功时保存账号
+                saveAccount(document.getElementById('loginUser').value.trim(), document.getElementById('loginPass').value);
+                showLoginMsg('登录成功', true);
+                setTimeout(showWorldsPage, 400);
+            } else showLoginMsg(msg.msg, false);
+            break;
+        case 'world_list':
+            renderWorldList(msg.data);
+            if (msg.globalNotice) {
+                document.getElementById('globalNoticeText').textContent = msg.globalNotice;
+                document.getElementById('globalNoticeBar').style.display = 'block';
+            } else {
+                document.getElementById('globalNoticeBar').style.display = 'none';
+            }
+            break;
+        case 'enter_world_result':
+            if (msg.ok) enterGame(msg);
+            else alert(msg.msg);
+            break;
+        case 'action_result': handleActionResult(msg); break;
+        case 'chat': addChatMsg(msg.from, msg.text, msg.channel); break;
+        case 'private_msg': addPrivateMsg(msg.from, msg.text); break;
+        case 'group_msg': addGroupMsg(msg.groupName, msg.from, msg.text); break;
+        case 'player_online': addSysMsg(msg.username + ' 上线了'); break;
+        case 'player_offline': addSysMsg(msg.username + ' 下线了'); break;
+        case 'announcement': addAnnounce(msg.text); break;
+        case 'world_update': if (msg.announcement) addAnnounce(msg.announcement); break;
+        case 'season_update': updSeason(msg.season, msg.weather); break;
+        case 'visitor_enter': addSysMsg(msg.username + ' 来你农场串门了'); break;
+        case 'visitor_leave': addSysMsg(msg.username + ' 离开了你的农场'); break;
+        case 'trade_incoming': showTradeIncoming(msg.trade); break;
+        case 'trade_completed': addActionOk('交易完成！'); if (msg.seeds) playerData.seeds = msg.seeds; if (msg.fruits) playerData.fruits = msg.fruits; if (msg.money !== undefined) { playerData.money = msg.money; updMoney(); } break;
+        case 'trade_rejected': addActionFail('对方拒绝了你的交易'); break;
+        case 'trade_cancelled': addSysMsg('一笔交易被取消了'); break;
+        case 'friend_request_received': addSysMsg(msg.from + ' 请求加你为好友'); break;
+        case 'friend_accepted': addActionOk(msg.by + ' 接受了你的好友请求'); break;
+        case 'group_invite': addSysMsg(msg.inviter + ' 邀请你加入群聊「' + msg.group.name + '」'); break;
+        case 'player_update': playerData = msg.player; refreshFarm(); break;
+        case 'kicked': alert(msg.msg || '被踢出'); exitToWorlds(); break;
+        case 'blacklisted': alert(msg.msg || '你已被加入黑名单'); exitToWorlds(); break;
+        case 'heartbeat_ack':
+            if (msg.timestamp) serverTimeOffset = msg.timestamp - Date.now();
+            break;
+        case 'visitor_water':
+            addSysMsg(msg.from + ' 给你的 ' + msg.plantName + ' 浇了水 💧');
+            // ★ 同步更新本地地块浇水状态
+            if (playerData && playerData.plots && playerData.plots[msg.plotId] && playerData.plots[msg.plotId].plant) {
+                playerData.plots[msg.plotId].plant.watered = true;
+                if (!visitingOwner) renderPlots();
+            }
+            break;
+       case 'farm_plot_update':
+            // ★ 其他访客浇水后，更新串门视图
+            if (visitingOwner === msg.owner) {
+                addSysMsg('有人给 ' + msg.plantName + ' 浇了水 💧');
+                doAction('visit_farm', { farmId: visitingFarmId });
+            }
+            break;
+       case 'feedback_result':
+            if (msg.ok) addActionOk(msg.msg || '反馈已提交');
+            else addActionFail(msg.msg || '提交失败');
+            break;
+    }
+}
+
+// ★ 被踢出时回到世界列表而不是刷新页面
+function exitToWorlds() {
+    clearTimers();
+    currentWorld = null;
+    playerData = null;
+    visitingOwner = null;
+    visitingFarmId = null;
+    document.querySelectorAll('.panel-overlay').forEach(function(el) { el.classList.remove('show'); });
+    var vbar = document.getElementById('visitStatusBar');
+    if (vbar) vbar.remove();
+    document.getElementById('msgArea').innerHTML = '';
+    if (username) showWorldsPage();
+    else showPage('loginPage');
+}
+
+function handleActionResult(msg) {
+    var a = msg.action, ok = msg.ok;
+    if (msg.stamina !== undefined && playerData) { playerData.stamina = msg.stamina; updStamina(); }
+    if (msg.staminaMax !== undefined && playerData) { playerData.staminaMax = msg.staminaMax; updStamina(); }
+    if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
+    if (msg.plots && playerData && a !== 'visit_farm') {
+        if (a === 'water' && visitingOwner) {
+            updateVisitPlots(msg.plots);
+        } else {
+            playerData.plots = msg.plots;
+            renderPlots();
+        }
+    }
+    if (msg.seeds && playerData && a !== 'visit_farm') playerData.seeds = msg.seeds;
+    if (msg.fruits && playerData && a !== 'visit_farm') playerData.fruits = msg.fruits;
+    if (msg.items && playerData) playerData.items = msg.items;
+    if (msg.restCooldown !== undefined && playerData) playerData.restCooldown = msg.restCooldown;
+    if (msg.hasWaterBoost !== undefined && playerData) playerData.hasWaterBoost = msg.hasWaterBoost;
+
+    switch(a) {
+        case 'gather': if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); break;
+        case 'rest': if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); break;
+        case 'plant': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
+        case 'water': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
+        case 'fertilize': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
+        case 'harvest': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
+        case 'my_farm':
+            if (ok && playerData) {
+                playerData.plots = msg.plots; playerData.seeds = msg.seeds; playerData.fruits = msg.fruits;
+                playerData.items = msg.items; playerData.money = msg.money; playerData.stamina = msg.stamina;
+                playerData.staminaMax = msg.staminaMax; playerData.restCooldown = msg.restCooldown;
+                playerData.farmId = msg.farmId; playerData.hasWaterBoost = msg.hasWaterBoost;
+                // ★ 串门中不刷新农场视图，只更新数据
+                if (!visitingOwner) {
+                    refreshFarm();
+                } else {
+                    updStamina();
+                    updMoney();
+                }
+            }
+            break;
+        case 'inventory':
+            if (ok) {
+                playerData.seeds = msg.seeds; playerData.fruits = msg.fruits;
+                playerData.items = msg.items; playerData.money = msg.money;
+                renderInventoryPanel(msg.seeds, msg.fruits, msg.items, msg.money);
+                if (window._pendingSellRender) { window._pendingSellRender = false; renderSellPanel(); }
+            }
+            break;
+        case 'shop_list':
+            if (ok) renderShopPanel(msg.shop, msg.money);
+            break;
+        case 'shop_buy':
+            if (ok) { addActionOk(msg.msg); } else addActionFail(msg.msg);
+            break;
+        case 'sell_fruit':
+            if (ok) { addActionOk(msg.msg); openSell(); } else addActionFail(msg.msg);
+            break;
+        case 'wild_areas':
+            if (ok) renderWildPanel(msg.areas, msg.stamina, msg.staminaMax);
+            break;
+        case 'visit_farm':
+            if (ok) {
+                var isRefresh = (visitingOwner === msg.owner);
+                if (isRefresh) {
+                    // ★ 静默刷新：只更新地块，不重建状态条和弹消息
+                    updateVisitPlots(msg.plots);
+                } else {
+                    renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors);
+                    closePanel('panelVisit');
+                    addActionOk('来到了 ' + msg.owner + ' 的农场');
+                }
+            }
+            else { if (!visitingOwner) addActionFail(msg.msg); }
+            break;
+        case 'go_home':
+            if (ok) {
+                visitingOwner = null;
+                visitingFarmId = null;
+                closePanel('panelVisit');
+                var vbar = document.getElementById('visitStatusBar');
+                if (vbar) vbar.remove();
+                var ft = document.querySelector('.farm-title');
+                if (ft && playerData) {
+                    ft.innerHTML = '<span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ' + (playerData.farmId || '???') + '</span>';
+                }
+                addActionOk('回到了自己的农场');
+                doAction('my_farm');
+            }
+            break;
+        case 'friend_list':
+            if (ok) renderFriendsPanel(msg.friends, msg.requests);
+            break;
+        case 'friend_request': case 'friend_accept': case 'friend_reject': case 'friend_remove':
+            if (ok) { addActionOk(msg.msg); doAction('friend_list'); } else addActionFail(msg.msg);
+            break;
+        case 'trade_create':
+            if (ok) { addActionOk(msg.msg); closePanel('panelTrade'); } else addActionFail(msg.msg);
+            break;
+        case 'trade_list':
+            if (ok) renderTradeList(msg.trades);
+            break;
+        case 'trade_accept': case 'trade_reject': case 'trade_cancel':
+            if (ok) { addActionOk(msg.msg); doAction('trade_list'); } else addActionFail(msg.msg);
+            break;
+        case 'private_msg':
+            if (ok) addActionOk(msg.msg); else addActionFail(msg.msg);
+            break;
+        case 'list_groups':
+            if (ok) renderGroupsPanel(msg.groups);
+            break;
+        case 'create_group':
+            if (ok) { addActionOk('群聊创建成功'); doAction('list_groups'); } else addActionFail(msg.msg);
+            break;
+        case 'invite_group':
+            if (ok) addActionOk(msg.msg); else addActionFail(msg.msg);
+            break;
+        case 'leave_group':
+            if (ok) { addActionOk(msg.msg); doAction('list_groups'); } else addActionFail(msg.msg);
+            break;
+        case 'group_msg':
+            if (!ok) addActionFail(msg.msg);
+            break;
+        default:
+            if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
+    }
+}
+
+function doLogin() { var u = document.getElementById('loginUser').value.trim(), p = document.getElementById('loginPass').value; if (!u || !p) { showLoginMsg('请输入昵称和密码', false); return; } wsSend({ type: 'login', username: u, password: p }); }
+function doRegister() { var u = document.getElementById('loginUser').value.trim(), p = document.getElementById('loginPass').value; if (!u || !p) { showLoginMsg('请输入昵称和密码', false); return; } wsSend({ type: 'register', username: u, password: p }); }
+function doLogout() { username = null; farmId = null; currentWorld = null; playerData = null; clearTimers(); showPage('loginPage'); }
+function showLoginMsg(t, ok) { var e = document.getElementById('loginMsg'); e.textContent = t; e.className = 'login-msg ' + (ok ? 'ok' : 'err'); }
+function updLoginStatus(t, ok) { var e = document.getElementById('loginStatus'); if (e) { e.textContent = t; e.style.color = ok === true ? '#4ade80' : ok === false ? '#ef4444' : '#555'; } }
+
+function showPage(id) { document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); }); document.getElementById(id).classList.add('active'); }
+function showWorldsPage() { document.getElementById('displayUser').textContent = username; document.getElementById('displayFarmId').textContent = farmId || '???'; showPage('worldsPage'); wsSend({ type: 'list_worlds' }); }
+
+function renderWorldList(list) {
+    var c = document.getElementById('worldsList');
+    if (!list || list.length === 0) { c.innerHTML = '<div class="no-worlds">暂无世界<br><span style="font-size:12px;color:#555;">等待天道创建...</span></div>'; return; }
+    var h = '';
+    for (var i = 0; i < list.length; i++) {
+        var w = list[i];
+        if (w.status !== 'active') continue;
+        h += '<div class="world-card" data-wid="' + w.id + '" data-haspw="' + w.hasPassword + '" onclick="clickWorld(this)">';
+        h += '<h3>🌾 ' + esc(w.name) + '</h3>';
+        h += '<div class="world-info"><span>👥 ' + (w.playerCount || 0) + '人</span>';
+        if (w.hasPassword) h += '<span>🔒 需密码</span>';
+        h += '</div>';
+        h += '<div class="world-pw-input" id="wpw_' + w.id + '" onclick="event.stopPropagation()"><input type="password" placeholder="输入密码" id="wpwi_' + w.id + '"><button onclick="enterWorld(\'' + w.id + '\')">进入</button></div>';
+        h += '</div>';
+    }
+    h += '<div style="padding:16px 0 8px;text-align:center;">';
+    h += '<button style="padding:10px 24px;background:rgba(167,139,250,0.15);color:#c4b5fd;border:1px solid rgba(167,139,250,0.25);border-radius:10px;font-size:13px;cursor:pointer;" onclick="openFeedbackForm()">📝 意见反馈</button>';
+    h += '</div>';
+    h += '<div id="feedbackFormArea" style="display:none;padding:0 12px 12px;">';
+    h += '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;">';
+    h += '<div style="font-size:13px;color:#c4b5fd;margin-bottom:8px;">📝 意见反馈</div>';
+    h += '<textarea id="feedbackText" placeholder="写下你的建议、bug反馈或想法..." style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px;font-size:13px;color:#e0e0e0;outline:none;min-height:80px;resize:vertical;font-family:inherit;"></textarea>';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+    h += '<span style="font-size:11px;color:#666;">最多500字</span>';
+    h += '<button style="padding:8px 20px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;" onclick="submitFeedback()">提交反馈</button>';
+    h += '</div></div></div>';
+    c.innerHTML = h;
+}
+function clickWorld(el) { var wid = el.getAttribute('data-wid'), hp = el.getAttribute('data-haspw') === 'true'; if (hp) { var d = document.getElementById('wpw_' + wid); d.style.display = d.style.display === 'block' ? 'none' : 'block'; } else enterWorld(wid); }
+function enterWorld(wid) { var pi = document.getElementById('wpwi_' + wid); wsSend({ type: 'enter_world', worldId: wid, password: pi ? pi.value : '' }); }
+
+function clearTimers() {
+    if (window._farmRefreshTimer) { clearInterval(window._farmRefreshTimer); window._farmRefreshTimer = null; }
+    if (window._localPlotTimer) { clearInterval(window._localPlotTimer); window._localPlotTimer = null; }
+}
+
+function enterGame(msg) {
+    currentWorld = msg.world;
+    playerData = msg.player;
+    document.getElementById('gameWorldName').textContent = currentWorld.name;
+    document.getElementById('farmIdDisplay').textContent = 'ID: ' + (playerData.farmId || '???');
+    updSeason(currentWorld.season, currentWorld.weather);
+    updStamina();
+    updMoney();
+    renderPlots();
+    document.getElementById('msgArea').innerHTML = '';
+    addSysMsg('欢迎来到「' + currentWorld.name + '」');
+    if (currentWorld.announcements) {
+        for (var i = 0; i < currentWorld.announcements.length; i++) addAnnounce(currentWorld.announcements[i].text);
+    }
+    showPage('gamePage');
+    clearTimers();
+    window._farmRefreshTimer = setInterval(function() {
+        if (visitingOwner) {
+            // ★ 串门中：重新拉取好友农场数据
+            doAction('visit_farm', { farmId: visitingFarmId });
+        } else {
+            doAction('my_farm');
+        }
+    }, 10000);
+    window._localPlotTimer = setInterval(localUpdatePlots, 5000);
+}
+
+function localUpdatePlots() {
+    if (visitingOwner) return;
+    if (!playerData || !playerData.plots) return;
+    var now = Date.now() + serverTimeOffset;
+    var anyChange = false;
+    playerData.plots.forEach(function(pl) {
+        if (pl.plant && !pl.plant.mature) {
+            var elapsed = now - pl.plant.plantedAt;
+            var gt = pl.plant.effectiveGrowTime || pl.plant.growTime || 7200000;
+            var newProg = Math.max(0, Math.min(1, elapsed / gt));
+            if (Math.abs(newProg - (pl.plant.progress || 0)) > 0.005) {
+                pl.plant.progress = newProg;
+                if (newProg >= 1) pl.plant.mature = true;
+                anyChange = true;
+            }
+        }
+    });
+    if (anyChange) renderPlots();
+}
+
+function updStamina() {
+    if (!playerData) return;
+    var pct = Math.round((playerData.stamina / (playerData.staminaMax || 100)) * 100);
+    document.getElementById('staminaFill').style.width = pct + '%';
+    document.getElementById('staminaVal').textContent = playerData.stamina + '/' + (playerData.staminaMax || 100);
+}
+function updMoney() { if (!playerData) return; document.getElementById('moneyTop').textContent = '💰 ' + playerData.money; }
+function updSeason(season, weather) {
+    var sMap = { '春': '🌸 春', '夏': '☀️ 夏', '秋': '🍂 秋', '冬': '❄️ 冬' };
+    var wMap = { '晴': '☀️ 晴', '多云': '⛅ 多云', '阴': '☁️ 阴', '小雨': '🌦️ 小雨', '大雨': '🌧️ 大雨', '雪': '🌨️ 雪', '雾': '🌫️ 雾' };
+    if (season) document.getElementById('gameSeason').textContent = sMap[season] || season;
+    if (weather) document.getElementById('gameWeather').textContent = wMap[weather] || weather;
+}
+function refreshFarm() { updStamina(); updMoney(); renderPlots(); }
+
+function renderPlots() {
+    if (!playerData) return;
+    var g = document.getElementById('plotsGrid');
+    var h = '';
+    for (var i = 0; i < playerData.plots.length; i++) {
+        var pl = playerData.plots[i];
+        if (pl.plant) {
+            var progress = pl.plant.progress;
+            if (progress === undefined || progress === null || isNaN(progress)) progress = 0;
+            progress = Math.max(0, Math.min(1, progress));
+            var mature = pl.plant.mature || progress >= 1;
+            var pct = Math.floor(progress * 100);
+            h += '<div class="plot' + (mature ? ' mature' : '') + '" onclick="clickPlot(' + i + ')">';
+            h += '<span class="plot-icon">' + (mature ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</span>';
+            h += '<span class="plot-name">' + esc(pl.plant.name) + '</span>';
+            if (mature) {
+                h += '<span class="plot-progress" style="color:#fcd34d;">可收获！</span>';
+            } else {
+                h += '<span class="plot-progress">' + pct + '%</span>';
+                h += '<div class="plot-progress-bar"><div class="plot-progress-fill" style="width:' + pct + '%"></div></div>';
+            }
+            var tags = [];
+            if (pl.plant.watered) tags.push('💧');
+            if (pl.plant.fertilizerReduce > 0) tags.push('🧪');
+            if (tags.length > 0) h += '<span class="plot-progress" style="font-size:12px;">' + tags.join('') + '</span>';
+            h += '</div>';
+        } else {
+            h += '<div class="plot empty" onclick="clickPlot(' + i + ')">';
+            h += '<span class="plot-icon">➕</span>';
+            h += '<span class="plot-name">空地</span>';
+            h += '</div>';
+        }
+    }
+    g.innerHTML = h;
+}
+
+function doVisitWater(plotId) { doAction('water', { plotId: plotId }); }
+
+function clickPlot(plotId) {
+    if (!playerData) return;
+    var pl = playerData.plots[plotId];
+    var h = '';
+    if (!pl.plant) {
+        h += '<div style="text-align:center;margin-bottom:10px;font-size:13px;color:#aaa;">第' + (plotId + 1) + '块地 · 空地</div>';
+        if (!playerData.seeds || playerData.seeds.length === 0) {
+            h += '<div style="text-align:center;color:#666;padding:20px;">没有种子，去野外采集或商店购买吧</div>';
+        } else {
+            h += '<div style="font-size:12px;color:#888;margin-bottom:8px;">选择种子种植：</div>';
+            for (var i = 0; i < playerData.seeds.length; i++) {
+                var s = playerData.seeds[i];
+                var growMin = Math.round(s.growTime / 60000);
+                var growText = growMin >= 60 ? Math.round(growMin / 60 * 10) / 10 + '小时' : growMin + '分钟';
+                h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="doPlant(' + plotId + ',\'' + s.id + '\')">';
+                h += '<span style="font-size:13px;">' + (s.icon || '🌱') + ' ' + esc(s.name) + ' <span style="color:#888;font-size:11px;">x' + s.count + '</span></span>';
+                h += '<span style="font-size:11px;color:#888;">生长: ' + growText + ' → ' + (s.fruitIcon || '🍎') + esc(s.fruitName) + '</span>';
+                h += '</div>';
+            }
+        }
+    } else {
+        var progress = pl.plant.progress;
+        if (progress === undefined || progress === null || isNaN(progress)) progress = 0;
+        progress = Math.max(0, Math.min(1, progress));
+        var mature = pl.plant.mature || progress >= 1;
+        var pct = Math.floor(progress * 100);
+        var gt = pl.plant.effectiveGrowTime || pl.plant.growTime || 7200000;
+        var now = Date.now() + serverTimeOffset;
+        var elapsed = now - pl.plant.plantedAt;
+        var remainMs = Math.max(0, gt - elapsed);
+        var remainMin = Math.ceil(remainMs / 60000);
+        var remainText = remainMin >= 60 ? Math.floor(remainMin / 60) + '时' + (remainMin % 60) + '分' : remainMin + '分钟';
+        h += '<div style="text-align:center;margin-bottom:12px;">';
+        h += '<div style="font-size:36px;margin-bottom:6px;">' + (mature ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</div>';
+        h += '<div style="font-size:16px;color:#a5d6a7;">' + esc(pl.plant.name) + '</div>';
+        h += '<div style="font-size:12px;color:#888;margin-top:4px;">第' + (plotId + 1) + '块地</div>';
+        if (mature) {
+            h += '<div style="font-size:14px;color:#fcd34d;margin-top:6px;">🎉 已成熟！</div>';
+        } else {
+            h += '<div style="font-size:13px;color:#aaa;margin-top:6px;">成长进度: ' + pct + '%</div>';
+            h += '<div style="width:80%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin:6px auto;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:#4caf50;border-radius:3px;"></div></div>';
+            h += '<div style="font-size:11px;color:#888;">预计还需: ' + remainText + '</div>';
+        }
+        var tags = [];
+        if (pl.plant.watered) tags.push('💧 已浇水');
+        if (pl.plant.fertilizerReduce > 0) tags.push('🧪 已施肥');
+        if (tags.length > 0) h += '<div style="font-size:11px;color:#666;margin-top:4px;">' + tags.join(' · ') + '</div>';
+        h += '</div>';
+        h += '<div style="display:flex;flex-direction:column;gap:6px;">';
+        if (mature) {
+            h += '<button style="padding:12px;background:#4caf50;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;" onclick="doHarvest(' + plotId + ')">🌾 收获</button>';
+        } else {
+            if (!pl.plant.watered) {
+                h += '<button style="padding:10px;background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doWater(' + plotId + ')">💧 浇水（免费，减少生长时间）</button>';
+            }
+            var fertilizers = (playerData.items || []).filter(function(it) { return it.type === 'fertilizer'; });
+            if (fertilizers.length > 0) {
+                for (var fi = 0; fi < fertilizers.length; fi++) {
+                    var f = fertilizers[fi];
+                    h += '<button style="padding:10px;background:rgba(245,158,11,0.2);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doFertilize(' + plotId + ',\'' + f.id + '\')">🧪 ' + esc(f.name) + ' (x' + f.count + ')</button>';
+                }
+            } else {
+                h += '<div style="font-size:11px;color:#666;text-align:center;padding:6px;">没有肥料，可以去商店购买</div>';
+            }
+        }
+        h += '</div>';
+    }
+    document.getElementById('plotActionContent').innerHTML = h;
+    openPanel('panelPlotAction');
+}
+
+function doPlant(plotId, seedId) { doAction('plant', { plotId: plotId, seedId: seedId }); }
+function doWater(plotId) { doAction('water', { plotId: plotId }); closePanel('panelPlotAction'); }
+function doFertilize(plotId, itemId) { doAction('fertilize', { plotId: plotId, itemId: itemId }); }
+function doHarvest(plotId) { doAction('harvest', { plotId: plotId }); }
+
+function openWild() { doAction('wild_areas'); openPanel('panelWild'); }
+function renderWildPanel(areas, stamina, staminaMax) {
+    var h = '<div style="font-size:12px;color:#888;margin-bottom:10px;">⚡ 体力: ' + stamina + '/' + staminaMax + '（每次采集消耗25体力）</div>';
+    if (!areas || areas.length === 0) {
+        h += '<div style="color:#666;text-align:center;padding:20px;">这个世界没有野外区域</div>';
+    } else {
+        for (var i = 0; i < areas.length; i++) {
+            var a = areas[i];
+            h += '<div class="wild-area-card" onclick="doGather(' + i + ')">';
+            h += '<div class="wa-name">' + (a.icon || '🌿') + ' ' + esc(a.name) + '</div>';
+            h += '<div class="wa-desc">' + esc(a.desc || '') + '</div>';
+            if (a.seedNames && a.seedNames.length > 0) h += '<div class="wa-seeds">可能找到: ' + a.seedNames.join('、') + '</div>';
+            h += '</div>';
+        }
+    }
+    h += '<div style="margin-top:10px;"><button style="width:100%;padding:10px;background:rgba(6,182,212,0.2);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doRest()">💤 休息（恢复8体力，CD 10分钟）</button></div>';
+    document.getElementById('wildContent').innerHTML = h;
+}
+function doGather(areaIndex) { doAction('gather', { areaIndex: areaIndex }); }
+function doRest() { doAction('rest'); }
+
+function openVisit() {
+    var h = '<div style="margin-bottom:12px;">';
+    h += '<div style="font-size:12px;color:#888;margin-bottom:6px;">输入对方的领地ID去串门：</div>';
+    h += '<div style="display:flex;gap:6px;"><input type="text" id="visitFarmIdInput" placeholder="6位领地ID" maxlength="6" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:9px 12px;font-size:14px;color:#e0e0e0;outline:none;text-transform:uppercase;font-family:monospace;letter-spacing:2px;">';
+    h += '<button style="padding:9px 16px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;" onclick="doVisit()">去串门</button></div>';
+    h += '</div>';
+    if (visitingOwner) {
+        h += '<div style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.2);border-radius:10px;padding:10px;margin-bottom:10px;font-size:12px;color:#a5d6a7;">当前在 ' + esc(visitingOwner) + ' 的农场（' + visitingFarmId + '）</div>';
+        h += '<button style="width:100%;padding:10px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doGoHome()">🏡 回自己农场</button>';
+    }
+    h += '<div id="visitFarmView"></div>';
+    document.getElementById('visitContent').innerHTML = h;
+    openPanel('panelVisit');
+}
+function doVisit() { var fid = document.getElementById('visitFarmIdInput').value.trim().toUpperCase(); if (!fid) return; doAction('visit_farm', { farmId: fid }); }
+function doGoHome() { doAction('go_home'); }
+function renderVisitFarm(owner, fid, plots, visitors) {
+    visitingOwner = owner; visitingFarmId = fid;
+    var h = '<div class="visit-farm-view">';
+    h += '<div style="font-size:15px;color:#a5d6a7;margin-bottom:4px;">🏡 ' + esc(owner) + ' 的农场</div>';
+    h += '<div style="font-size:11px;color:#666;margin-bottom:8px;">领地ID: ' + fid + '</div>';
+    if (visitors && visitors.length > 0) h += '<div style="font-size:11px;color:#888;margin-bottom:8px;">也在这里: ' + visitors.map(function(v) { return esc(v); }).join(', ') + '</div>';
+    h += '<div class="visit-plots-grid">';
+    for (var i = 0; i < plots.length; i++) {
+        var pl = plots[i];
+        var canWater = pl.plant && !pl.plant.mature && !pl.plant.watered;
+        h += '<div class="visit-plot' + (canWater ? ' clickable-visit' : '') + '"' + (canWater ? ' onclick="doVisitWater(' + i + ')" style="cursor:pointer;"' : '') + '>';
+        if (pl.plant) {
+            var prog = pl.plant.progress;
+            if (prog === undefined || prog === null || isNaN(prog)) prog = 0;
+            prog = Math.max(0, Math.min(1, prog));
+            var isMature = pl.plant.mature || prog >= 1;
+            h += '<span class="vp-icon">' + (isMature ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</span>';
+            h += '<span class="vp-name">' + esc(pl.plant.name) + '</span>';
+            if (isMature) h += '<span class="vp-status" style="color:#fcd34d;">已成熟</span>';
+            else {
+                h += '<span class="vp-status">' + Math.floor(prog * 100) + '%</span>';
+                if (pl.plant.watered) h += '<span class="vp-status" style="color:#67e8f9;">💧已浇水</span>';
+                else h += '<span class="vp-status" style="color:#93c5fd;">💧点击浇水</span>';
+            }
+        } else {
+            h += '<span class="vp-icon" style="opacity:0.3;">🟫</span>';
+            h += '<span class="vp-name" style="color:#666;">空地</span>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+    h += '<button style="width:100%;margin-top:10px;padding:10px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doGoHome()">🏡 回自己农场</button>';
+    h += '</div>';
+    var vfv = document.getElementById('visitFarmView');
+    if (vfv) vfv.innerHTML = h;
+    else document.getElementById('visitContent').innerHTML += h;
+
+// ★ 在主界面农场区域显示串门视图
+    var farmArea = document.getElementById('farmArea');
+    var farmTitle = document.querySelector('.farm-title');
+    if (farmTitle) {
+        farmTitle.innerHTML = '<span>🏠 ' + esc(owner) + ' 的农场</span><span class="farm-id">ID: ' + fid + '</span>';
+    }
+    var plotsGrid = document.getElementById('plotsGrid');
+    var visitHtml = '';
+    for (var vi = 0; vi < plots.length; vi++) {
+        var vpl = plots[vi];
+        var vCanWater = vpl.plant && !vpl.plant.mature && !vpl.plant.watered;
+        visitHtml += '<div class="plot' + (vpl.plant && (vpl.plant.mature || (vpl.plant.progress || 0) >= 1) ? ' mature' : '') + (vCanWater ? '' : ' empty') + '"' + (vCanWater ? ' onclick="doVisitWater(' + vi + ')" style="cursor:pointer;"' : '') + '>';
+        if (vpl.plant) {
+            var vProg = vpl.plant.progress || 0;
+            vProg = Math.max(0, Math.min(1, vProg));
+            var vMature = vpl.plant.mature || vProg >= 1;
+            visitHtml += '<span class="plot-icon">' + (vMature ? (vpl.plant.fruitIcon || '🍎') : (vpl.plant.icon || '🌱')) + '</span>';
+            visitHtml += '<span class="plot-name">' + esc(vpl.plant.name) + '</span>';
+            if (vMature) visitHtml += '<span class="plot-progress" style="color:#fcd34d;">已成熟</span>';
+            else {
+                visitHtml += '<span class="plot-progress">' + Math.floor(vProg * 100) + '%</span>';
+                visitHtml += '<div class="plot-progress-bar"><div class="plot-progress-fill" style="width:' + Math.floor(vProg * 100) + '%"></div></div>';
+                if (vpl.plant.watered) visitHtml += '<span class="plot-progress">💧已浇水</span>';
+                else visitHtml += '<span class="plot-progress" style="color:#93c5fd;">💧点击浇水</span>';
+            }
+        } else {
+            visitHtml += '<span class="plot-icon" style="opacity:0.3;">🟫</span>';
+            visitHtml += '<span class="plot-name" style="color:#666;">空地</span>';
+        }
+        visitHtml += '</div>';
+    }
+    plotsGrid.innerHTML = visitHtml;
+
+    // ★ 显示串门状态条
+    var existingBar = document.getElementById('visitStatusBar');
+    if (existingBar) existingBar.remove();
+    var bar = document.createElement('div');
+    bar.id = 'visitStatusBar';
+    bar.style.cssText = 'padding:8px 12px;background:rgba(76,175,80,0.1);border-bottom:1px solid rgba(76,175,80,0.2);font-size:12px;color:#a5d6a7;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
+    bar.innerHTML = '🏠 正在参观 <b>' + esc(owner) + '</b> 的农场（' + fid + '）<button style="padding:4px 12px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:6px;font-size:11px;cursor:pointer;" onclick="doGoHome()">🏡 回家</button>';
+    farmArea.parentNode.insertBefore(bar, farmArea);
+}
+function updateVisitPlots(plots) {
+    // ★ 只更新主界面的地块格子，不重建状态条
+    var plotsGrid = document.getElementById('plotsGrid');
+    if (!plotsGrid) return;
+    var visitHtml = '';
+    for (var vi = 0; vi < plots.length; vi++) {
+        var vpl = plots[vi];
+        var vCanWater = vpl.plant && !vpl.plant.mature && !vpl.plant.watered;
+        visitHtml += '<div class="plot' + (vpl.plant && (vpl.plant.mature || (vpl.plant.progress || 0) >= 1) ? ' mature' : '') + (vCanWater ? '' : ' empty') + '"' + (vCanWater ? ' onclick="doVisitWater(' + vi + ')" style="cursor:pointer;"' : '') + '>';
+        if (vpl.plant) {
+            var vProg = vpl.plant.progress || 0;
+            vProg = Math.max(0, Math.min(1, vProg));
+            var vMature = vpl.plant.mature || vProg >= 1;
+            visitHtml += '<span class="plot-icon">' + (vMature ? (vpl.plant.fruitIcon || '🍎') : (vpl.plant.icon || '🌱')) + '</span>';
+            visitHtml += '<span class="plot-name">' + esc(vpl.plant.name) + '</span>';
+            if (vMature) visitHtml += '<span class="plot-progress" style="color:#fcd34d;">已成熟</span>';
+            else {
+                visitHtml += '<span class="plot-progress">' + Math.floor(vProg * 100) + '%</span>';
+                visitHtml += '<div class="plot-progress-bar"><div class="plot-progress-fill" style="width:' + Math.floor(vProg * 100) + '%"></div></div>';
+                if (vpl.plant.watered) visitHtml += '<span class="plot-progress">💧已浇水</span>';
+                else visitHtml += '<span class="plot-progress" style="color:#93c5fd;">💧点击浇水</span>';
+            }
+        } else {
+            visitHtml += '<span class="plot-icon" style="opacity:0.3;">🟫</span>';
+            visitHtml += '<span class="plot-name" style="color:#666;">空地</span>';
+        }
+        visitHtml += '</div>';
+    }
+    plotsGrid.innerHTML = visitHtml;
+
+    // ★ 同时更新串门面板里的地块（如果面板开着的话）
+    var vfv = document.getElementById('visitFarmView');
+    if (vfv) {
+        var vpGrid = vfv.querySelector('.visit-plots-grid');
+        if (vpGrid) {
+            var panelHtml = '';
+            for (var i = 0; i < plots.length; i++) {
+                var pl = plots[i];
+                var canWater = pl.plant && !pl.plant.mature && !pl.plant.watered;
+                panelHtml += '<div class="visit-plot"' + (canWater ? ' onclick="doVisitWater(' + i + ')" style="cursor:pointer;"' : '') + '>';
+                if (pl.plant) {
+                    var prog = pl.plant.progress || 0;
+                    prog = Math.max(0, Math.min(1, prog));
+                    var isMature = pl.plant.mature || prog >= 1;
+                    panelHtml += '<span class="vp-icon">' + (isMature ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</span>';
+                    panelHtml += '<span class="vp-name">' + esc(pl.plant.name) + '</span>';
+                    if (isMature) panelHtml += '<span class="vp-status" style="color:#fcd34d;">已成熟</span>';
+                    else {
+                        panelHtml += '<span class="vp-status">' + Math.floor(prog * 100) + '%</span>';
+                        if (pl.plant.watered) panelHtml += '<span class="vp-status" style="color:#67e8f9;">💧已浇水</span>';
+                        else panelHtml += '<span class="vp-status" style="color:#93c5fd;">💧点击浇水</span>';
+                    }
+                } else {
+                    panelHtml += '<span class="vp-icon" style="opacity:0.3;">🟫</span>';
+                    panelHtml += '<span class="vp-name" style="color:#666;">空地</span>';
+                }
+                panelHtml += '</div>';
+            }
+            vpGrid.innerHTML = panelHtml;
+        }
+    }
+}
+
+function openInventory() { doAction('inventory'); openPanel('panelInv'); }
+function renderInventoryPanel(seeds, fruits, items, money) {
+    var h = '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 金币: ' + money + '</div>';
+    h += '<div class="inv-section"><div class="inv-section-title">🌱 种子</div><div class="inv-grid">';
+    if (seeds && seeds.length > 0) {
+        for (var i = 0; i < seeds.length; i++) {
+            var s = seeds[i];
+            h += '<div class="inv-item" title="' + esc(s.name) + '"><span class="ii-icon">' + (s.icon || '🌱') + '</span><span class="ii-name">' + esc(s.name) + '</span><span class="ii-count">x' + s.count + '</span></div>';
+        }
+    } else { h += '<div class="inv-empty">没有种子</div>'; }
+    h += '</div></div>';
+    h += '<div class="inv-section"><div class="inv-section-title">🍎 果实</div><div class="inv-grid">';
+    if (fruits && fruits.length > 0) {
+        for (var j = 0; j < fruits.length; j++) {
+            var f = fruits[j];
+            h += '<div class="inv-item" title="' + esc(f.name) + ' 价值' + f.value + '"><span class="ii-icon">' + (f.icon || '🍎') + '</span><span class="ii-name">' + esc(f.name) + '</span><span class="ii-count">x' + f.count + ' (💰' + f.value + ')</span></div>';
+        }
+    } else { h += '<div class="inv-empty">没有果实</div>'; }
+    h += '</div></div>';
+    h += '<div class="inv-section"><div class="inv-section-title">🧰 道具</div><div class="inv-grid">';
+    if (items && items.length > 0) {
+        for (var k = 0; k < items.length; k++) {
+            var it = items[k];
+            h += '<div class="inv-item" title="' + esc(it.desc || '') + '"><span class="ii-icon">🧪</span><span class="ii-name">' + esc(it.name) + '</span><span class="ii-count">x' + it.count + '</span></div>';
+        }
+    } else { h += '<div class="inv-empty">没有道具</div>'; }
+    h += '</div></div>';
+    document.getElementById('invContent').innerHTML = h;
+}
+
+function openShop() { doAction('shop_list'); openPanel('panelShop'); }
+function renderShopPanel(shop, money) {
+    var h = '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 你的金币: ' + money + '</div>';
+    if (!shop || !shop.items || shop.items.length === 0) {
+        h += '<div style="color:#666;text-align:center;padding:20px;">商店空空如也</div>';
+        document.getElementById('shopContent').innerHTML = h;
+        return;
+    }
+    var seeds = shop.items.filter(function(it) { return it.type === 'seed'; });
+    var fertilizers = shop.items.filter(function(it) { return it.type === 'fertilizer'; });
+    var tools = shop.items.filter(function(it) { return it.type === 'tool'; });
+    if (seeds.length > 0) {
+        h += '<div style="font-size:12px;color:#a5d6a7;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🌱 种子(一种多收)</div>';
+        for (var i = 0; i < seeds.length; i++) {
+            var s = seeds[i];
+            var sd = s.seedData || {};
+            var growMin = Math.round((sd.growTime || 0) / 60000);
+            var growText = growMin >= 60 ? Math.round(growMin / 60 * 10) / 10 + '小时' : growMin + '分钟';
+            h += '<div class="shop-item">';
+            h += '<div class="si-info"><div class="si-name">' + (s.icon || sd.icon || '🌱') + ' ' + esc(s.name) + '</div>';
+            h += '<div class="si-desc">' + esc(s.desc) + '</div>';
+            h += '<div style="font-size:10px;color:#888;margin-top:2px;">生长' + growText + ' → ' + (sd.fruitIcon || '🍎') + esc(sd.fruitName || '') + ' (售💰' + (sd.fruitValue || '?') + ')</div></div>';
+            h += '<span class="si-price">💰' + s.price + '</span>';
+            h += '<div style="display:flex;flex-direction:column;gap:3px;">';
+            h += '<button onclick="doBuy(\'' + s.id + '\',1)">买1</button>';
+            h += '<button onclick="doBuy(\'' + s.id + '\',5)" style="background:#388e3c;">买5</button>';
+            h += '</div></div>';
+        }
+    }
+    if (fertilizers.length > 0) {
+        h += '<div style="font-size:12px;color:#fcd34d;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🧪 肥料</div>';
+        for (var j = 0; j < fertilizers.length; j++) {
+            var f = fertilizers[j];
+            h += '<div class="shop-item"><div class="si-info"><div class="si-name">🧪 ' + esc(f.name) + '</div><div class="si-desc">' + esc(f.desc || '') + '</div></div>';
+            h += '<span class="si-price">💰' + f.price + '</span><button onclick="doBuy(\'' + f.id + '\',1)">购买</button></div>';
+        }
+    }
+    if (tools.length > 0) {
+        h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🔨 工具</div>';
+        for (var k = 0; k < tools.length; k++) {
+            var t = tools[k];
+            h += '<div class="shop-item"><div class="si-info"><div class="si-name">🔨 ' + esc(t.name) + '</div><div class="si-desc">' + esc(t.desc || '') + '</div></div>';
+            h += '<span class="si-price">💰' + t.price + '</span><button onclick="doBuy(\'' + t.id + '\',1)">购买</button></div>';
+        }
+    }
+    document.getElementById('shopContent').innerHTML = h;
+}
+function doBuy(itemId, count) { doAction('shop_buy', { itemId: itemId, count: count || 1 }); }
+
+function openSell() {
+    window._pendingSellRender = true;
+    doAction('inventory');
+    openPanel('panelSell');
+}
+function renderSellPanel() {
+    if (!playerData) return;
+    var h = '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 当前金币: ' + playerData.money + '</div>';
+    if (!playerData.fruits || playerData.fruits.length === 0) {
+        h += '<div style="color:#666;text-align:center;padding:20px;">没有可卖的果实</div>';
+    } else {
+        for (var i = 0; i < playerData.fruits.length; i++) {
+            var f = playerData.fruits[i];
+            h += '<div class="sell-item"><div class="sl-info"><div class="sl-name">' + (f.icon || '🍎') + ' ' + esc(f.name) + '</div><div class="sl-detail">数量: ' + f.count + ' · 单价: 💰' + f.value + '</div></div>';
+            h += '<div style="display:flex;gap:4px;">';
+            h += '<button onclick="doSell(\'' + f.id + '\',1)">卖1个</button>';
+            if (f.count >= 5) h += '<button onclick="doSell(\'' + f.id + '\',5)">卖5个</button>';
+            if (f.count >= 10) h += '<button onclick="doSell(\'' + f.id + '\',' + f.count + ')">全卖</button>';
+            h += '</div></div>';
+        }
+    }
+    document.getElementById('sellContent').innerHTML = h;
+}
+function doSell(fruitId, count) { doAction('sell_fruit', { fruitId: fruitId, count: count }); }
+
+function openTrade() {
+    var h = '<div style="margin-bottom:14px;">';
+    h += '<button style="width:100%;padding:10px;background:rgba(251,191,36,0.2);color:#fcd34d;border:1px solid rgba(251,191,36,0.3);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:8px;" onclick="showTradeForm()">📝 发起新交易</button>';
+    h += '<button style="width:100%;padding:10px;background:rgba(255,255,255,0.05);color:#aaa;border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doAction(\'trade_list\')">📋 查看交易列表</button>';
+    h += '</div><div id="tradeFormArea"></div><div id="tradeListArea"></div>';
+    document.getElementById('tradeContent').innerHTML = h;
+    openPanel('panelTrade');
+    doAction('trade_list');
+}
+
+function showTradeForm() {
+    if (!playerData) return;
+    var h = '<div class="trade-form">';
+    h += '<label>交易对象（昵称）</label><input type="text" id="tradeTo" placeholder="输入对方昵称">';
+    h += '<label>我要给出</label><select id="tradeOfferType" onchange="updTradeOfferItems()"><option value="seed">种子</option><option value="fruit">果实</option><option value="money">金币</option></select>';
+    h += '<div id="tradeOfferIdWrap"><select id="tradeOfferId"></select></div>';
+    h += '<label id="tradeOfferCountLabel">给出数量</label><input type="number" id="tradeOfferCount" value="1" min="1">';
+    h += '<div id="tradeOfferMoneyInfo" style="display:none;font-size:11px;color:#fcd34d;"></div>';
+    h += '<label>我想要（类型）</label><select id="tradeWantType" onchange="updTradeWantFields()"><option value="seed">种子</option><option value="fruit">果实</option><option value="money">金币</option><option value="any">不需要回报（赠送）</option></select>';
+    h += '<div id="tradeWantDetailWrap">';
+    h += '<label>想要的物品名称</label><input type="text" id="tradeWantName" placeholder="输入物品名称">';
+    h += '<label>想要数量</label><input type="number" id="tradeWantCount" value="1" min="1">';
+    h += '</div>';
+    h += '<button onclick="submitTrade()">🤝 发起交易</button></div>';
+    document.getElementById('tradeFormArea').innerHTML = h;
+    updTradeOfferItems();
+}
+
+function updTradeOfferItems() {
+    var type = document.getElementById('tradeOfferType').value;
+    var selWrap = document.getElementById('tradeOfferIdWrap');
+    var moneyInfo = document.getElementById('tradeOfferMoneyInfo');
+    var countLabel = document.getElementById('tradeOfferCountLabel');
+    if (type === 'money') {
+        selWrap.style.display = 'none';
+        moneyInfo.style.display = 'block';
+        moneyInfo.textContent = '💰 当前金币: ' + playerData.money;
+        countLabel.textContent = '给出金币数量';
+    } else {
+        selWrap.style.display = '';
+        moneyInfo.style.display = 'none';
+        countLabel.textContent = '给出数量';
+        var sel = document.getElementById('tradeOfferId');
+        sel.innerHTML = '';
+        var arr = type === 'seed' ? (playerData.seeds || []) : (playerData.fruits || []);
+        for (var i = 0; i < arr.length; i++) {
+            var opt = document.createElement('option');
+            opt.value = arr[i].id;
+            opt.textContent = arr[i].name + ' (x' + arr[i].count + ')';
+            sel.appendChild(opt);
+        }
+        if (arr.length === 0) { var o = document.createElement('option'); o.textContent = '没有物品'; o.value = ''; sel.appendChild(o); }
+    }
+}
+
+function updTradeWantFields() {
+    var type = document.getElementById('tradeWantType').value;
+    var wrap = document.getElementById('tradeWantDetailWrap');
+    if (type === 'any') {
+        wrap.style.display = 'none';
+    } else if (type === 'money') {
+        wrap.innerHTML = '<label>想要金币数量</label><input type="number" id="tradeWantCount" value="1" min="1">';
+        wrap.style.display = '';
+    } else {
+        wrap.innerHTML = '<label>想要的物品名称</label><input type="text" id="tradeWantName" placeholder="输入物品名称"><label>想要数量</label><input type="number" id="tradeWantCount" value="1" min="1">';
+        wrap.style.display = '';
+    }
+}
+
+function submitTrade() {
+    var to = (document.getElementById('tradeTo').value || '').trim();
+    if (!to) { addActionFail('请输入交易对象'); return; }
+    var offerType = document.getElementById('tradeOfferType').value;
+    var offerId = offerType === 'money' ? 'money' : (document.getElementById('tradeOfferId').value || '');
+    if (offerType !== 'money' && !offerId) { addActionFail('请选择要给出的物品'); return; }
+    var offerCount = parseInt(document.getElementById('tradeOfferCount').value) || 1;
+    var wantType = document.getElementById('tradeWantType').value;
+    var wantNameEl = document.getElementById('tradeWantName');
+    var wantCountEl = document.getElementById('tradeWantCount');
+    var wantName = wantType === 'money' ? '金币' : (wantType === 'any' ? '无（赠送）' : (wantNameEl ? wantNameEl.value.trim() : ''));
+    var wantCount = wantCountEl ? (parseInt(wantCountEl.value) || 1) : 1;
+    if (wantType !== 'any' && wantType !== 'money' && !wantName) { addActionFail('请输入想要的物品名称'); return; }
+    doAction('trade_create', {
+        to: to,
+        offerType: offerType,
+        offerId: offerId,
+        offerCount: offerCount,
+        wantType: wantType,
+        wantId: wantType === 'money' ? 'money' : (wantName || ''),
+        wantName: wantName || '任意',
+        wantCount: wantCount
+    });
+}
+
+function renderTradeList(trades) {
+    var el = document.getElementById('tradeListArea');
+    if (!el) return;
+    if (!trades || trades.length === 0) { el.innerHTML = '<div style="color:#666;text-align:center;padding:10px;font-size:12px;">没有待处理的交易</div>'; return; }
+    var h = '<div style="font-size:12px;color:#888;margin-bottom:6px;">待处理交易：</div>';
+    for (var i = 0; i < trades.length; i++) {
+        var t = trades[i];
+        var isFrom = t.from === username;
+        var offerText = t.offerType === 'money' ? '💰' + t.offerCount + '金币' : esc(t.offerName) + ' x' + t.offerCount;
+        var wantText = t.wantType === 'any' ? '无（赠送）' : (t.wantType === 'money' ? '💰' + t.wantCount + '金币' : esc(t.wantName) + ' x' + t.wantCount);
+        h += '<div class="msg-trade" style="margin-bottom:6px;">';
+        h += '<div>' + (isFrom ? '你' : esc(t.from)) + ' 想用 <b>' + offerText + '</b> 换 ' + (isFrom ? esc(t.to) : '你') + ' 的 <b>' + wantText + '</b></div>';
+        h += '<div class="trade-btns">';
+        if (!isFrom) {
+            h += '<button class="t-accept" onclick="doAction(\'trade_accept\',{tradeId:\'' + t.id + '\'})">接受</button>';
+            h += '<button class="t-reject" onclick="doAction(\'trade_reject\',{tradeId:\'' + t.id + '\'})">拒绝</button>';
+        } else {
+            h += '<button class="t-reject" onclick="doAction(\'trade_cancel\',{tradeId:\'' + t.id + '\'})">取消</button>';
+        }
+        h += '</div></div>';
+    }
+    el.innerHTML = h;
+}
+
+function showTradeIncoming(trade) {
+    var offerText = trade.offerType === 'money' ? '💰' + trade.offerCount + '金币' : esc(trade.offerName) + ' x' + trade.offerCount;
+    var wantText = trade.wantType === 'any' ? '无（赠送）' : (trade.wantType === 'money' ? '💰' + trade.wantCount + '金币' : esc(trade.wantName) + ' x' + trade.wantCount);
+    var h = '<div class="msg-trade">';
+    h += '<div>📦 ' + esc(trade.from) + ' 想用 <b>' + offerText + '</b> 换你的 <b>' + wantText + '</b></div>';
+    h += '<div class="trade-btns">';
+    h += '<button class="t-accept" onclick="doAction(\'trade_accept\',{tradeId:\'' + trade.id + '\'})">接受</button>';
+    h += '<button class="t-reject" onclick="doAction(\'trade_reject\',{tradeId:\'' + trade.id + '\'})">拒绝</button>';
+    h += '</div></div>';
+    var div = document.createElement('div');
+    div.className = 'msg-item';
+    div.innerHTML = h;
+    appendMsg(div);
+}
+
+function openFriends() { doAction('friend_list'); openPanel('panelFriends'); }
+function renderFriendsPanel(friends, requests) {
+    var h = '';
+    h += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+    h += '<input type="text" id="addFriendInput" placeholder="输入昵称" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:13px;color:#e0e0e0;outline:none;">';
+    h += '<button style="padding:8px 14px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="doAddFriend()">添加</button></div>';
+    h += '<button style="width:100%;padding:8px;background:rgba(103,232,249,0.1);color:#67e8f9;border:1px solid rgba(103,232,249,0.2);border-radius:8px;font-size:12px;cursor:pointer;margin-bottom:12px;" onclick="openGroups()">💬 群聊管理</button>';
+    if (requests && requests.length > 0) {
+        h += '<div style="font-size:12px;color:#c4b5fd;margin-bottom:6px;">好友请求：</div>';
+        for (var r = 0; r < requests.length; r++) {
+            h += '<div class="friend-req"><span>' + esc(requests[r]) + ' 请求加你为好友</span>';
+            h += '<span style="display:flex;gap:4px;">';
+            h += '<button style="padding:3px 10px;background:#4caf50;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;" onclick="doAction(\'friend_accept\',{from:\'' + esc(requests[r]) + '\'})">接受</button>';
+            h += '<button style="padding:3px 10px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;" onclick="doAction(\'friend_reject\',{from:\'' + esc(requests[r]) + '\'})">拒绝</button>';
+            h += '</span></div>';
+        }
+    }
+    h += '<div style="font-size:12px;color:#888;margin-bottom:6px;">好友列表：</div>';
+    if (!friends || friends.length === 0) {
+        h += '<div style="color:#666;text-align:center;padding:20px;font-size:12px;">还没有好友</div>';
+    } else {
+        for (var i = 0; i < friends.length; i++) {
+            var f = friends[i];
+            h += '<div class="friend-item"><span><span class="fi-name">' + (f.online ? '🟢' : '⚫') + ' ' + esc(f.username) + '</span><span class="fi-id">' + f.farmId + '</span></span>';
+            h += '<div class="fi-btns">';
+            h += '<button style="background:rgba(76,175,80,0.2);color:#a5d6a7;" onclick="doVisitFriend(\'' + f.farmId + '\')">串门</button>';
+            h += '<button style="background:rgba(167,139,250,0.2);color:#c4b5fd;" onclick="doPrivateMsg(\'' + esc(f.username) + '\')">私聊</button>';
+            h += '<button style="background:rgba(239,68,68,0.2);color:#fca5a5;" onclick="doAction(\'friend_remove\',{target:\'' + esc(f.username) + '\'})">删除</button>';
+            h += '</div></div>';
+        }
+    }
+    document.getElementById('friendsContent').innerHTML = h;
+}
+function doAddFriend() { var input = document.getElementById('addFriendInput'); var target = (input.value || '').trim(); if (!target) return; doAction('friend_request', { target: target }); input.value = ''; }
+function doVisitFriend(fid) { closePanel('panelFriends'); doAction('visit_farm', { farmId: fid }); openPanel('panelVisit'); setTimeout(function() { var vi = document.getElementById('visitFarmIdInput'); if (vi) vi.value = fid; }, 100); }
+function doPrivateMsg(target) { var text = prompt('发送私聊消息给 ' + target + '：'); if (!text || !text.trim()) return; doAction('private_msg', { to: target, text: text.trim() }); }
+
+function openGroups() { doAction('list_groups'); closePanel('panelFriends'); openPanel('panelGroups'); }
+function renderGroupsPanel(groups) {
+    var h = '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+    h += '<input type="text" id="newGroupName" placeholder="群名称" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:13px;color:#e0e0e0;outline:none;">';
+    h += '<button style="padding:8px 14px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="doCreateGroup()">创建群</button></div>';
+    if (!groups || groups.length === 0) {
+        h += '<div style="color:#666;text-align:center;padding:20px;font-size:12px;">还没有群聊</div>';
+    } else {
+        for (var i = 0; i < groups.length; i++) {
+            var g = groups[i];
+            h += '<div class="group-item"><span><span class="gi-name">💬 ' + esc(g.name) + '</span> <span class="gi-info">(' + g.members.length + '人 · 群主:' + esc(g.owner) + ')</span></span>';
+            h += '<div style="display:flex;gap:4px;">';
+            h += '<button style="padding:3px 10px;background:rgba(103,232,249,0.2);color:#67e8f9;border:none;border-radius:6px;font-size:11px;cursor:pointer;" onclick="doGroupChat(\'' + g.id + '\',\'' + esc(g.name) + '\')">发消息</button>';
+            h += '<button style="padding:3px 10px;background:rgba(167,139,250,0.2);color:#c4b5fd;border:none;border-radius:6px;font-size:11px;cursor:pointer;" onclick="doInviteGroup(\'' + g.id + '\')">邀请</button>';
+            h += '<button style="padding:3px 10px;background:rgba(239,68,68,0.2);color:#fca5a5;border:none;border-radius:6px;font-size:11px;cursor:pointer;" onclick="doAction(\'leave_group\',{groupId:\'' + g.id + '\'})">退出</button>';
+            h += '</div></div>';
+        }
+    }
+    document.getElementById('groupsContent').innerHTML = h;
+}
+function doCreateGroup() { var input = document.getElementById('newGroupName'); var name = (input.value || '').trim(); if (!name) return; doAction('create_group', { name: name }); input.value = ''; }
+function doGroupChat(groupId, groupName) { var text = prompt('发送消息到群「' + groupName + '」：'); if (!text || !text.trim()) return; doAction('group_msg', { groupId: groupId, text: text.trim() }); addGroupMsg(groupName, username, text.trim()); }
+function doInviteGroup(groupId) { var target = prompt('输入要邀请的昵称：'); if (!target || !target.trim()) return; doAction('invite_group', { groupId: groupId, target: target.trim() }); }
+
+function sendChat() {
+    var input = document.getElementById('chatInput');
+    var text = input.value.trim();
+    if (!text) return;
+    doAction('chat', { text: text, channel: chatChannel });
+    addChatMsg(username, text, chatChannel, true);
+    input.value = '';
+    input.focus();
+}
+function toggleChannel() {
+    if (chatChannel === 'world') chatChannel = 'farm';
+    else chatChannel = 'world';
+    document.getElementById('chatChannelBtn').textContent = '📢 ' + (chatChannel === 'world' ? '世界频道' : '农场频道');
+}
+
+function addChatMsg(from, text, channel, isMe) {
+    var div = document.createElement('div');
+    div.className = 'msg-item msg-chat';
+    var chLabel = channel === 'world' ? '[世界] ' : '[农场] ';
+    var nc = (isMe || from === username) ? 'me' : '';
+    div.innerHTML = '<span class="chat-channel">' + chLabel + '</span><span class="chat-name ' + nc + '">' + esc(from) + '</span>' + esc(text);
+    appendMsg(div);
+}
+function addPrivateMsg(from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '🔒 <b>' + esc(from) + '</b> 悄悄对你说: ' + esc(text); appendMsg(div); }
+function addGroupMsg(groupName, from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '💬 [' + esc(groupName) + '] <b>' + esc(from) + '</b>: ' + esc(text); appendMsg(div); }
+function addSysMsg(text) { var d = document.createElement('div'); d.className = 'msg-item msg-system'; d.textContent = text; appendMsg(d); }
+function addAnnounce(text) { var d = document.createElement('div'); d.className = 'msg-item msg-announce'; d.innerHTML = '📜 ' + esc(text); appendMsg(d); }
+function addActionOk(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action ok'; d.textContent = text; appendMsg(d); }
+function addActionFail(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action fail'; d.textContent = text; appendMsg(d); }
+function appendMsg(el) { var a = document.getElementById('msgArea'); a.appendChild(el); while (a.children.length > 200) a.removeChild(a.firstChild); a.scrollTop = a.scrollHeight; }
+
+function openPanel(id) { document.getElementById(id).classList.add('show'); }
+function closePanel(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.panel-overlay').forEach(function(el) { el.addEventListener('click', function(e) { if (e.target === el) el.classList.remove('show'); }); });
+
+function esc(t) { if (t === null || t === undefined) return ''; var d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+
+document.getElementById('chatInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') sendChat(); });
+document.getElementById('loginPass').addEventListener('keypress', function(e) { if (e.key === 'Enter') doLogin(); });
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        if (!ws || ws.readyState !== WebSocket.OPEN) connectWS();
+        if (playerData) doAction('my_farm');
+    }
+});
+
+// ★ 页面加载时恢复保存的账号
+loadSavedAccount();
+connectWS();
+</script>
+</body>
+</html>
+
+
