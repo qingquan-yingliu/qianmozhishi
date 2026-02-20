@@ -30,11 +30,48 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .login-msg.err{color:#ef4444;}
 .login-msg.ok{color:#4ade80;}
 .login-status{text-align:center;font-size:11px;color:#555;margin-top:16px;}
-.worlds-page{background:#1a2e1a;}
-.worlds-header{padding:16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
-.worlds-header h2{font-size:18px;color:#6abf69;}
-.worlds-header .user-info{font-size:12px;color:#888;margin-top:4px;}
-.worlds-list{flex:1;overflow-y:auto;padding:12px;}
+.worlds-page{
+    background:#1a2e1a;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+}
+.worlds-header{
+    padding:16px;
+    text-align:center;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    flex-shrink:0;
+}
+.worlds-header h2{
+    font-size:18px;
+    color:#6abf69;
+}
+.worlds-header .user-info{
+    font-size:12px;
+    color:#888;
+    margin-top:4px;
+}
+#globalNoticeBar{
+    display:none;
+    padding:8px 16px;
+    background:rgba(76,175,80,0.08);
+    border-bottom:1px solid rgba(76,175,80,0.15);
+    font-size:12px;
+    color:#a5d6a7;
+    line-height:1.6;
+    flex-shrink:0;
+    max-height:120px;
+    overflow-y:auto;
+}
+#globalNoticeBar.show{
+    display:block;
+}
+.worlds-list{
+    flex:1;
+    overflow-y:auto;
+    padding:12px;
+    min-height:0;
+}
 .world-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all 0.2s;}
 .world-card:hover{border-color:#6abf69;background:rgba(106,191,105,0.08);}
 .world-card h3{font-size:15px;color:#a5d6a7;margin-bottom:4px;}
@@ -44,7 +81,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .world-pw-input input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;font-size:13px;color:#e0e0e0;outline:none;}
 .world-pw-input button{margin-top:6px;width:100%;padding:9px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
 .no-worlds{text-align:center;color:#666;padding:40px 20px;font-size:14px;}
-.worlds-footer{padding:12px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;text-align:center;}
+.worlds-footer{
+    padding:12px;
+    border-top:1px solid rgba(255,255,255,0.08);
+    flex-shrink:0;
+    text-align:center;
+}
 .btn-logout{background:transparent;border:1px solid rgba(255,255,255,0.15);color:#888;padding:8px 24px;border-radius:8px;font-size:12px;cursor:pointer;}
 .game-page{background:#12201a;}
 .game-top{padding:8px 12px;background:rgba(0,0,0,0.3);border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;}
@@ -181,13 +223,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         </div>
         <button class="btn btn-green" onclick="doLogin()">登 入</button>
         <button class="btn btn-ghost" onclick="doRegister()">注册新账号</button>
-        <div class="login-msg" id="loginMsg"></div>
+        <div class="login-msg" id="loginMsg".worlds-page></div>
         <div class="login-status" id="loginStatus">正在连接服务器...</div>
     </div>
 </div>
 <div class="page worlds-page" id="worldsPage">
     <div class="worlds-header"><h2>🌾 选择世界</h2><div class="user-info">欢迎，<span id="displayUser"></span>（领地ID: <span id="displayFarmId" style="font-family:monospace;color:#fcd34d;"></span>）</div></div>
-    <div id="globalNoticeBar" style="display:none;padding:8px 16px;background:rgba(76,175,80,0.08);border-bottom:1px solid rgba(76,175,80,0.15);font-size:12px;color:#a5d6a7;line-height:1.6;flex-shrink:0;">
+    <div id="globalNoticeBar" style="display:none;">
         <div style="font-size:11px;color:#66bb6a;font-weight:600;margin-bottom:2px;">📜 公告</div>
         <div id="globalNoticeText" style="white-space:pre-wrap;"></div>
     </div>
