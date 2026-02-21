@@ -1885,19 +1885,17 @@
                     }
                     break;
                 case 'sell_fruit':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true); openSell(); } else { addActionFail(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false); }
+                    if (ok) { if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true); openSell(); } else { if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false); }
                     break;
                 case 'sell_seed':
                     if (ok) { addActionOk(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true); openSell(); } else { addActionFail(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false); }
                     break;
                 case 'sell_stock_animal':
                     if (ok) {
-                        addActionOk(msg.msg);
                         if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true);
                         if (msg.animals && playerData) playerData.animals = msg.animals;
                         openSell();
                     } else {
-                        addActionFail(msg.msg);
                         if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false);
                     }
                     break;
@@ -2142,28 +2140,27 @@
                     break;
                 case 'mail_claim':
                     if (ok) {
-                        addActionOk(msg.msg);
                         if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true);
                         if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
                         if (msg.seeds && playerData) playerData.seeds = msg.seeds;
                         if (msg.fruits && playerData) playerData.fruits = msg.fruits;
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         doAction('mail_list');
-                    } else { addActionFail(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    } else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
                     break;
                 case 'mail_delete':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
-                    else { addActionFail(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
+                    else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
                     break;
                 case 'mail_delete_all':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
-                    else { addActionFail(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
+                    else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
                     break;
                 case 'mail_read':
                     if (ok) { doAction('mail_list'); }
                     break;
                 case 'mail_read_all':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
+                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
                     break;
                 default:
                     if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
