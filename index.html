@@ -1795,13 +1795,18 @@
                             updStamina();
                         }
                         if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: true };
                             doAction('wild_areas');
                         }
                     } else {
                         addActionFail(msg.msg);
+                        if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: false };
+                            doAction('wild_areas');
+                        }
                     }
                     break;
-                case 'rest': if (ok) { addActionOk(msg.msg); if (document.getElementById('panelWild').classList.contains('show')) { doAction('wild_areas'); } } else addActionFail(msg.msg); break;
+                case 'rest': if (ok) { addActionOk(msg.msg); if (document.getElementById('panelWild').classList.contains('show')) { _pendingWildTip = { msg: msg.msg, ok: true }; doAction('wild_areas'); } } else { addActionFail(msg.msg); if (document.getElementById('panelWild').classList.contains('show')) { _pendingWildTip = { msg: msg.msg, ok: false }; doAction('wild_areas'); } } break;
                 case 'plant': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
                 case 'water': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
                 case 'fertilize': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
@@ -1866,6 +1871,10 @@
                     break;
                 case 'wild_areas':
                     if (ok) renderWildPanel(msg.areas, msg.stamina, msg.staminaMax);
+                    if (_pendingWildTip) {
+                        showWildTip(_pendingWildTip.msg, _pendingWildTip.ok);
+                        _pendingWildTip = null;
+                    }
                     break;
                 case 'catch_animal':
                     if (ok) {
@@ -1878,10 +1887,15 @@
                             playerData.animals = msg.animals;
                         }
                         if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: true };
                             doAction('wild_areas');
                         }
                     } else {
                         addActionFail(msg.msg);
+                        if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: false };
+                            doAction('wild_areas');
+                        }
                     }
                     break;
                 case 'place_animal':
@@ -2005,9 +2019,16 @@
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         if (msg.stamina !== undefined && playerData) { playerData.stamina = msg.stamina; updStamina(); }
                         if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: true };
                             doAction('wild_areas');
                         }
-                    } else { addActionFail(msg.msg); }
+                    } else {
+                        addActionFail(msg.msg);
+                        if (document.getElementById('panelWild').classList.contains('show')) {
+                            _pendingWildTip = { msg: msg.msg, ok: false };
+                            doAction('wild_areas');
+                        }
+                    }
                     break;
                 case 'rename_pet':
                     if (ok) { addActionOk(msg.msg); if (msg.pets && playerData) playerData.pets = msg.pets; doAction('my_pets'); }
@@ -2536,9 +2557,26 @@
         function doFertilize(plotId, itemId) { doAction('fertilize', { plotId: plotId, itemId: itemId }); }
         function doHarvest(plotId) { doAction('harvest', { plotId: plotId }); }
 
+        var _pendingWildTip = null;
+        function showWildTip(msg, isSuccess) {
+            var tip = document.getElementById('wildActionTip');
+            if (!tip) return;
+            tip.style.display = 'block';
+            tip.style.background = isSuccess ? 'rgba(76,175,80,0.15)' : 'rgba(239,68,68,0.1)';
+            tip.style.border = '1px solid ' + (isSuccess ? 'rgba(76,175,80,0.3)' : 'rgba(239,68,68,0.2)');
+            tip.style.color = isSuccess ? '#a5d6a7' : '#fca5a5';
+            tip.textContent = msg;
+            if (tip._hideTimer) clearTimeout(tip._hideTimer);
+            tip._hideTimer = setTimeout(function () {
+                if (tip) tip.style.display = 'none';
+            }, 2000);
+        }
+
         function openWild() { doAction('wild_areas'); openPanel('panelWild'); }
+
         function renderWildPanel(areas, stamina, staminaMax) {
             var h = '<div style="font-size:12px;color:#888;margin-bottom:10px;">⚡ 体力: ' + stamina + '/' + staminaMax + '</div>';
+            h += '<div id="wildActionTip" style="display:none;padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:13px;animation:fadeIn 0.3s ease;"></div>';
             if (!areas || areas.length === 0) {
                 h += '<div style="color:#666;text-align:center;padding:20px;">这个世界没有野外区域</div>';
             } else {
