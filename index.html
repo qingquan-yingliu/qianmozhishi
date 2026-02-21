@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>阡陌之诗</title>
+    <title>阡陌之诗1.7.1</title>
     <style>
         * {
             margin: 0;
@@ -1368,7 +1368,7 @@
 <body>
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.7.1</h1>
+            <h1>🌾 阡陌之诗 v1.7.2</h1>
             <div class="subtitle">种地、采集、交友、交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -1440,7 +1440,7 @@
                 <div class="nav-btn" onclick="openVisit()"><span class="nav-icon">🏠</span><span
                         class="nav-label">串门</span></div>
                 <div class="nav-btn" onclick="openInventory()"><span class="nav-icon">🎒</span><span
-                        class="nav-label">背包</span></div>
+                        class="nav-label">物品</span></div>
                 <div class="nav-btn" onclick="openShop()"><span class="nav-icon">🏪</span><span
                         class="nav-label">商店</span></div>
                 <div class="nav-btn" onclick="openTrade()"><span class="nav-icon">🤝</span><span
@@ -1489,7 +1489,7 @@
     </div>
     <div class="panel-overlay" id="panelInv">
         <div class="panel-box">
-            <div class="panel-title">🎒 背包 <span class="panel-close" onclick="closePanel('panelInv')">&times;</span>
+            <div class="panel-title">🎒 物品 <span class="panel-close" onclick="closePanel('panelInv')">&times;</span>
             </div>
             <div id="invContent"></div>
         </div>
@@ -1573,6 +1573,8 @@
         var visitingOwner = null, visitingFarmId = null;
         var cageUpdateTimer = null;
         var serverTimeOffset = 0;
+        var cachedFriendList = [];
+        var _inWorld = false;
 
         // ★ 记住账号
         function loadSavedAccount() {
@@ -1601,14 +1603,16 @@
 
         // ★ 退出世界回到选择界面
         function exitWorld() {
+            if (!_inWorld) return;
             if (!confirm('确定退出当前世界？')) return;
+            _inWorld = false;
+            _lastVisitPlotsHash = '';
             clearTimers();
             if (cageUpdateTimer) { clearInterval(cageUpdateTimer); cageUpdateTimer = null; }
             currentWorld = null;
             playerData = null;
             visitingOwner = null;
             visitingFarmId = null;
-            // 关闭所有面板
             document.querySelectorAll('.panel-overlay').forEach(function (el) { el.classList.remove('show'); });
             var vbar = document.getElementById('visitStatusBar');
             if (vbar) vbar.remove();
@@ -1746,7 +1750,10 @@
 
         // ★ 被踢出时回到世界列表而不是刷新页面
         function exitToWorlds() {
+            _inWorld = false;
+            _lastVisitPlotsHash = '';
             clearTimers();
+            if (cageUpdateTimer) { clearInterval(cageUpdateTimer); cageUpdateTimer = null; }
             currentWorld = null;
             playerData = null;
             visitingOwner = null;
@@ -1793,7 +1800,7 @@
                         addActionFail(msg.msg);
                     }
                     break;
-                case 'rest': if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); break;
+                case 'rest': if (ok) { addActionOk(msg.msg); if (document.getElementById('panelWild').classList.contains('show')) { doAction('wild_areas'); } } else addActionFail(msg.msg); break;
                 case 'plant': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
                 case 'water': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
                 case 'fertilize': if (ok) { addActionOk(msg.msg); closePanel('panelPlotAction'); } else addActionFail(msg.msg); break;
@@ -1848,6 +1855,13 @@
                     break;
                 case 'sell_seed':
                     if (ok) { addActionOk(msg.msg); openSell(); } else addActionFail(msg.msg);
+                    break;
+                case 'sell_stock_animal':
+                    if (ok) {
+                        addActionOk(msg.msg);
+                        if (msg.animals && playerData) playerData.animals = msg.animals;
+                        openSell();
+                    } else addActionFail(msg.msg);
                     break;
                 case 'wild_areas':
                     if (ok) renderWildPanel(msg.areas, msg.stamina, msg.staminaMax);
@@ -1941,7 +1955,10 @@
                     }
                     break;
                 case 'friend_list':
-                    if (ok) renderFriendsPanel(msg.friends, msg.requests);
+                    if (ok) {
+                        cachedFriendList = (msg.friends || []).map(function (f) { return f.username; });
+                        renderFriendsPanel(msg.friends, msg.requests);
+                    }
                     break;
                 case 'friend_request': case 'friend_accept': case 'friend_reject': case 'friend_remove':
                     if (ok) { addActionOk(msg.msg); doAction('friend_list'); } else addActionFail(msg.msg);
@@ -2064,18 +2081,13 @@
         function updLoginStatus(t, ok) { var e = document.getElementById('loginStatus'); if (e) { e.textContent = t; e.style.color = ok === true ? '#4ade80' : ok === false ? '#ef4444' : '#555'; } }
 
         function showWorldsPage() {
-            console.log('showWorldsPage called, username:', username);
             document.getElementById('displayUser').textContent = username;
             document.getElementById('displayFarmId').textContent = farmId || '???';
-            console.log('about to call showPage with worldsPage');
             showPage('worldsPage');
-            console.log('showPage returned, now calling wsSend');
             wsSend({ type: 'list_worlds' });
-            console.log('wsSend called');
         }
 
         function showPage(id) { document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); }); document.getElementById(id).classList.add('active'); }
-        function showWorldsPage() { document.getElementById('displayUser').textContent = username; document.getElementById('displayFarmId').textContent = farmId || '???'; showPage('worldsPage'); wsSend({ type: 'list_worlds' }); }
 
         function renderWorldList(list) {
             var c = document.getElementById('worldsList');
@@ -2115,6 +2127,8 @@
         }
 
         function enterGame(msg) {
+            _inWorld = true;
+            _lastVisitPlotsHash = '';
             currentWorld = msg.world;
             playerData = msg.player;
             document.getElementById('gameWorldName').textContent = currentWorld.name;
@@ -2146,6 +2160,7 @@
                 }
             }, 10000);
             window._localPlotTimer = setInterval(localUpdatePlots, 5000);
+            doAction('friend_list');
         }
 
         function localUpdatePlots() {
@@ -2530,6 +2545,7 @@
         function doVisit() { var fid = document.getElementById('visitFarmIdInput').value.trim().toUpperCase(); if (!fid) return; doAction('visit_farm', { farmId: fid }); }
         function doGoHome() { doAction('go_home'); }
         function renderVisitFarm(owner, fid, plots, visitors) {
+            lastVisitPlotsHash = '';
             visitingOwner = owner; visitingFarmId = fid;
             var h = '<div class="visit-farm-view">';
             h += '<div style="font-size:15px;color:#a5d6a7;margin-bottom:4px;">🏡 ' + esc(owner) + ' 的农场</div>';
@@ -2613,8 +2629,13 @@
             bar.innerHTML = '🏠 正在参观 <b>' + esc(owner) + '</b> 的农场（' + fid + '）<button style="padding:4px 12px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:6px;font-size:11px;cursor:pointer;" onclick="doGoHome()">🏡 回家</button>';
             farmArea.parentNode.insertBefore(bar, farmArea);
         }
+        var _lastVisitPlotsHash = '';
+
         function updateVisitPlots(plots) {
-            // ★ 只更新主界面的地块格子，不重建状态条
+            var newHash = JSON.stringify(plots);
+            if (newHash === _lastVisitPlotsHash) return;
+            _lastVisitPlotsHash = newHash;
+
             var plotsGrid = document.getElementById('plotsGrid');
             if (!plotsGrid) return;
             var visitHtml = '';
@@ -2645,7 +2666,6 @@
             }
             plotsGrid.innerHTML = visitHtml;
 
-            // ★ 同时更新串门面板里的地块（如果面板开着的话）
             var vfv = document.getElementById('visitFarmView');
             if (vfv) {
                 var vpGrid = vfv.querySelector('.visit-plots-grid');
@@ -2699,6 +2719,22 @@
                 }
             } else { h += '<div class="inv-empty">没有果实</div>'; }
             h += '</div></div>';
+
+            // ★ 新增：动物库存
+            var animals = (playerData && playerData.animals) ? playerData.animals : [];
+            h += '<div class="inv-section"><div class="inv-section-title">🐾 动物（未入圈）</div><div class="inv-grid">';
+            if (animals.length > 0) {
+                for (var ai = 0; ai < animals.length; ai++) {
+                    var a = animals[ai];
+                    h += '<div class="inv-item" title="' + esc(a.name) + ' 售价💰' + a.sellPrice + ' 食量' + a.foodPerHour + '/时">';
+                    h += '<span class="ii-icon">' + (a.icon || '🐾') + '</span>';
+                    h += '<span class="ii-name">' + esc(a.name) + '</span>';
+                    h += '<span class="ii-count">x' + a.count + ' (💰' + a.sellPrice + ')</span>';
+                    h += '</div>';
+                }
+            } else { h += '<div class="inv-empty">没有动物</div>'; }
+            h += '</div></div>';
+
             h += '<div class="inv-section"><div class="inv-section-title">🧰 道具</div><div class="inv-grid">';
             if (items && items.length > 0) {
                 for (var k = 0; k < items.length; k++) {
@@ -2986,7 +3022,7 @@
             if (!playerData) return;
             var h = '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 当前金币: ' + playerData.money + '</div>';
 
-            // ★ 卖出果实部分
+            // 卖出果实
             h += '<div style="font-size:12px;color:#a5d6a7;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🍎 果实卖出</div>';
             if (!playerData.fruits || playerData.fruits.length === 0) {
                 h += '<div style="color:#666;font-size:12px;padding:8px;">没有可卖的果实</div>';
@@ -3002,7 +3038,7 @@
                 }
             }
 
-            // ★ 卖出种子部分
+            // 卖出种子
             h += '<div style="font-size:12px;color:#a5d6a7;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🌱 种子卖出</div>';
             var sellableSeeds = (playerData.seeds || []).filter(function (s) { return s.source === 'bought' || s.source === 'harvest'; });
             if (sellableSeeds.length === 0) {
@@ -3012,8 +3048,7 @@
                     var s = sellableSeeds[j];
                     var seedPrice = 0;
                     if (s.source === 'bought') {
-                        // 需要从商店查询原价，这里先用估算值
-                        seedPrice = Math.floor(50 / 2);  // 假设平均购买价50
+                        seedPrice = Math.floor(50 / 2);
                     } else if (s.source === 'harvest') {
                         seedPrice = Math.floor((s.fruitValue || 10) / 3);
                     }
@@ -3027,6 +3062,23 @@
                 }
             }
 
+            // ★ 新增：卖出动物（未入圈的库存动物）
+            h += '<div style="font-size:12px;color:#fcd34d;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🐾 动物卖出（未入圈）</div>';
+            var animals = playerData.animals || [];
+            if (animals.length === 0) {
+                h += '<div style="color:#666;font-size:12px;padding:8px;">没有未入圈的动物</div>';
+            } else {
+                for (var ai = 0; ai < animals.length; ai++) {
+                    var a = animals[ai];
+                    h += '<div class="sell-item"><div class="sl-info"><div class="sl-name">' + (a.icon || '🐾') + ' ' + esc(a.name) + '</div><div class="sl-detail">数量: ' + a.count + ' · 单价: 💰' + a.sellPrice + '</div></div>';
+                    h += '<div style="display:flex;gap:4px;">';
+                    h += '<button onclick="doSellStockAnimal(\'' + a.id + '\',1)">卖1只</button>';
+                    if (a.count >= 5) h += '<button onclick="doSellStockAnimal(\'' + a.id + '\',5)">卖5只</button>';
+                    if (a.count >= 10) h += '<button onclick="doSellStockAnimal(\'' + a.id + '\',' + a.count + ')">全卖</button>';
+                    h += '</div></div>';
+                }
+            }
+
             document.getElementById('sellContent').innerHTML = h;
         }
 
@@ -3035,6 +3087,9 @@
         // ★ 卖出种子
         function doSellSeed(seedId, count) { doAction('sell_seed', { seedId: seedId, count: count }); }
 
+        function doSellStockAnimal(animalId, count) {
+            doAction('sell_stock_animal', { animalId: animalId, count: count });
+        }
 
         function openTrade() {
             var h = '<div style="margin-bottom:14px;">';
@@ -3210,6 +3265,7 @@
 
         function openFriends() { doAction('friend_list'); openPanel('panelFriends'); }
         function renderFriendsPanel(friends, requests) {
+            cachedFriendList = (friends || []).map(function (f) { return f.username; });
             var h = '';
             h += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
             h += '<input type="text" id="addFriendInput" placeholder="输入昵称" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:13px;color:#e0e0e0;outline:none;">';
@@ -3310,19 +3366,30 @@
         function addGroupMsg(groupName, from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '💬 [' + esc(groupName) + '] <b>' + esc(from) + '</b>: ' + esc(text); appendMsg(div); }
         function addSysMsg(text) { var d = document.createElement('div'); d.className = 'msg-item msg-system'; d.textContent = text; appendMsg(d); }
         // ★ 只显示好友的上下线
-        function checkAndShowFriendStatus(username, isOnline) {
-            if (!playerData) return;
-            var myFd = getFriendData(username);
-            // 检查这个用户是否在我的好友列表中
-            if (myFd && myFd.friends && myFd.friends.includes(username)) {
-                var statusText = isOnline ? '🟢 ' + esc(username) + ' 上线了' : '⚫ ' + esc(username) + ' 下线了';
-                addSysMsg(statusText);
-            }
+        function checkAndShowFriendStatus(targetUser, isOnline) {
+            if (!cachedFriendList || cachedFriendList.length === 0) return;
+            if (cachedFriendList.indexOf(targetUser) === -1) return;
+            var statusText = isOnline
+                ? '🟢 ' + esc(targetUser) + ' 上线了'
+                : '⚫ ' + esc(targetUser) + ' 下线了';
+            addSysMsg(statusText);
         }
         function addAnnounce(text) { var d = document.createElement('div'); d.className = 'msg-item msg-announce'; d.innerHTML = '📜 ' + esc(text); appendMsg(d); }
         function addActionOk(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action ok'; d.textContent = text; appendMsg(d); }
         function addActionFail(text) { var d = document.createElement('div'); d.className = 'msg-item msg-action fail'; d.textContent = text; appendMsg(d); }
-        function appendMsg(el) { var a = document.getElementById('msgArea'); a.appendChild(el); while (a.children.length > 200) a.removeChild(a.firstChild); a.scrollTop = a.scrollHeight; }
+        var _scrollPending = false;
+        function appendMsg(el) {
+            var a = document.getElementById('msgArea');
+            a.appendChild(el);
+            while (a.children.length > 100) a.removeChild(a.firstChild);
+            if (!_scrollPending) {
+                _scrollPending = true;
+                requestAnimationFrame(function () {
+                    a.scrollTop = a.scrollHeight;
+                    _scrollPending = false;
+                });
+            }
+        }
 
         function openPanel(id) { document.getElementById(id).classList.add('show'); }
         function closePanel(id) { document.getElementById(id).classList.remove('show'); }
