@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>阡陌之诗1.7.1</title>
+    <title>阡陌之诗</title>
     <style>
         * {
             margin: 0;
@@ -1368,7 +1367,7 @@
 <body>
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.7.2</h1>
+            <h1>🌾 阡陌之诗 v1.7.3</h1>
             <div class="subtitle">种地、采集、交友、交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -1399,7 +1398,10 @@
     <div class="page game-page" id="gamePage">
         <div class="game-top">
             <div class="game-top-row">
-                <span class="game-world-name" id="gameWorldName">世界</span>
+                <div>
+                    <span class="game-world-name" id="gameWorldName">世界</span>
+                    <div style="font-size:11px;color:#888;margin-top:2px;" id="gamePlayerInfo"></div>
+                </div>
                 <div class="game-info-right">
                     <span id="gameSeason">🌸 春</span>
                     <span id="gameWeather">☀️ 晴</span>
@@ -1684,11 +1686,9 @@
                 case 'group_msg': addGroupMsg(msg.groupName, msg.from, msg.text); break;
                 case 'player_online':
                     doAction('friend_list');
-                    checkAndShowFriendStatus(msg.username, true);
                     break;
                 case 'player_offline':
                     doAction('friend_list');
-                    checkAndShowFriendStatus(msg.username, false);
                     break;
                 case 'announcement': addAnnounce(msg.text); break;
                 case 'world_update': if (msg.announcement) addAnnounce(msg.announcement); break;
@@ -2069,6 +2069,16 @@
                     if (ok) { addActionOk(msg.msg); doAction('mail_list'); }
                     else addActionFail(msg.msg);
                     break;
+                case 'mail_delete_all':
+                    if (ok) { addActionOk(msg.msg); doAction('mail_list'); }
+                    else addActionFail(msg.msg);
+                    break;
+                case 'mail_read':
+                    if (ok) { doAction('mail_list'); }
+                    break;
+                case 'mail_read_all':
+                    if (ok) { addActionOk(msg.msg); doAction('mail_list'); }
+                    break;  
                 default:
                     if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
             }
@@ -2133,6 +2143,7 @@
             playerData = msg.player;
             document.getElementById('gameWorldName').textContent = currentWorld.name;
             document.getElementById('farmIdDisplay').textContent = 'ID: ' + (playerData.farmId || '???');
+            document.getElementById('gamePlayerInfo').textContent = username + ' · ID: ' + (playerData.farmId || '???');
             updSeason(currentWorld.season, currentWorld.weather);
             updStamina();
             updMoney();
@@ -3608,17 +3619,24 @@
                 h += '<div style="font-size:13px;">没有邮件</div>';
                 h += '</div>';
             } else {
-                h += '<div style="font-size:12px;color:#888;margin-bottom:8px;">共 ' + mails.length + ' 封邮件</div>';
+                h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
+                h += '<span style="font-size:12px;color:#888;">共 ' + mails.length + ' 封邮件</span>';
+                h += '<div style="display:flex;gap:6px;">';
+                h += '<button style="padding:5px 12px;background:rgba(103,232,249,0.15);color:#67e8f9;border:1px solid rgba(103,232,249,0.25);border-radius:6px;font-size:11px;cursor:pointer;" onclick="markAllMailRead()">全部已读</button>';
+                h += '<button style="padding:5px 12px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);border-radius:6px;font-size:11px;cursor:pointer;" onclick="deleteAllMail()">全部删除</button>';
+                h += '</div></div>';
+
                 for (var i = mails.length - 1; i >= 0; i--) {
                     var m = mails[i];
                     var hasAtt = m.attachments && m.attachments.length > 0;
                     var claimed = m.claimed;
-                    var borderColor = hasAtt && !claimed ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)';
-                    var bgColor = hasAtt && !claimed ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.03)';
+                    var isRead = m.read;
+                    var borderColor = !isRead ? 'rgba(103,232,249,0.3)' : hasAtt && !claimed ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.08)';
+                    var bgColor = !isRead ? 'rgba(103,232,249,0.05)' : hasAtt && !claimed ? 'rgba(251,191,36,0.05)' : 'rgba(255,255,255,0.03)';
 
                     h += '<div style="background:' + bgColor + ';border:1px solid ' + borderColor + ';border-radius:10px;padding:12px;margin-bottom:8px;">';
                     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-                    h += '<div style="font-size:13px;color:#a5d6a7;font-weight:600;">' + esc(m.subject || '系统邮件') + '</div>';
+                    h += '<div style="font-size:13px;color:#a5d6a7;font-weight:600;">' + (!isRead ? '🔵 ' : '') + esc(m.subject || '系统邮件') + '</div>';
                     h += '<div style="font-size:10px;color:#666;">' + formatMailTime(m.createdAt) + '</div>';
                     h += '</div>';
                     h += '<div style="font-size:11px;color:#888;margin-bottom:4px;">来自: ' + esc(m.from || '系统') + '</div>';
@@ -3648,6 +3666,9 @@
                     } else if (hasAtt && claimed) {
                         h += '<span style="flex:1;padding:8px;text-align:center;font-size:11px;color:#666;">✅ 已领取</span>';
                     }
+                    if (!isRead) {
+                        h += '<button style="padding:8px 14px;background:rgba(103,232,249,0.15);color:#67e8f9;border:1px solid rgba(103,232,249,0.25);border-radius:8px;font-size:11px;cursor:pointer;" onclick="markMailRead(\'' + m.id + '\')">已读</button>';
+                    }
                     h += '<button style="padding:8px 14px;background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:11px;cursor:pointer;" onclick="deleteMail(\'' + m.id + '\')">删除</button>';
                     h += '</div>';
                     h += '</div>';
@@ -3674,6 +3695,19 @@
         function deleteMail(mailId) {
             if (!confirm('确定删除这封邮件？')) return;
             doAction('mail_delete', { mailId: mailId });
+        }
+
+        function markMailRead(mailId) {
+            doAction('mail_read', { mailId: mailId });
+        }
+
+        function markAllMailRead() {
+            doAction('mail_read_all');
+        }
+
+        function deleteAllMail() {
+            if (!confirm('确定删除所有邮件？未领取的附件将丢失！')) return;
+            doAction('mail_delete_all');
         }
 
         // ★ 页面加载时恢复保存的账号
