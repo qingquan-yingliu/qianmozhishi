@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -1367,7 +1368,7 @@
 <body>
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.7.3</h1>
+            <h1>🌾 阡陌之诗 v1.7.5</h1>
             <div class="subtitle">种地、采集、交友、交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -1578,7 +1579,7 @@
         var cachedFriendList = [];
         var _inWorld = false;
 
-        // ★ 记住账号
+        //  记住账号
         function loadSavedAccount() {
             try {
                 var saved = localStorage.getItem('qmzs_account');
@@ -1603,7 +1604,7 @@
             try { localStorage.removeItem('qmzs_account'); } catch (e) { }
         }
 
-        // ★ 退出世界回到选择界面
+        //  退出世界回到选择界面
         function exitWorld() {
             if (!_inWorld) return;
             if (!confirm('确定退出当前世界？')) return;
@@ -1748,7 +1749,7 @@
         }
 
 
-        // ★ 被踢出时回到世界列表而不是刷新页面
+        //  被踢出时回到世界列表而不是刷新页面
         function exitToWorlds() {
             _inWorld = false;
             _lastVisitPlotsHash = '';
@@ -1773,7 +1774,7 @@
             if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
             if (msg.plots && playerData && a !== 'visit_farm') {
                 if (a === 'water' && visitingOwner) {
-                    updateVisitPlots(msg.plots);
+                    updateVisitPlots(msg.plots, msg.cages);
                 } else {
                     playerData.plots = msg.plots;
                     renderPlots();
@@ -1930,9 +1931,9 @@
                     if (ok) {
                         var isRefresh = (visitingOwner === msg.owner);
                         if (isRefresh) {
-                            updateVisitPlots(msg.plots);
+                            updateVisitPlots(msg.plots, msg.cages);
                         } else {
-                            renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors);
+                            renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors, msg.cages);
                             closePanel('panelVisit');
                             addActionOk('来到了 ' + msg.owner + ' 的农场');
                         }
@@ -1951,6 +1952,8 @@
                             ft.innerHTML = '<span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ' + (playerData.farmId || '???') + '</span>';
                         }
                         addActionOk('回到了自己的农场');
+                        var cageTitle = document.querySelector('.cage-title');
+                        if (cageTitle) cageTitle.textContent = '🐾 圈养区';
                         doAction('my_farm');
                     }
                     break;
@@ -2078,7 +2081,7 @@
                     break;
                 case 'mail_read_all':
                     if (ok) { addActionOk(msg.msg); doAction('mail_list'); }
-                    break;  
+                    break;
                 default:
                     if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
             }
@@ -2164,7 +2167,7 @@
             }, 15000);
             window._farmRefreshTimer = setInterval(function () {
                 if (visitingOwner) {
-                    // ★ 串门中：重新拉取好友农场数据
+                    //  串门中：重新拉取好友农场数据
                     doAction('visit_farm', { farmId: visitingFarmId });
                 } else {
                     doAction('my_farm');
@@ -2323,6 +2326,20 @@
 
                 h += '<div style="display:flex;flex-direction:column;gap:6px;">';
 
+                //  追加同种动物
+                var sameAnimals = (playerData.animals || []).filter(function (an) { return an.id === a.id; });
+                if (sameAnimals.length > 0) {
+                    var sa = sameAnimals[0];
+                    var saIdx = playerData.animals.indexOf(sa);
+                    h += '<div style="border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:8px;margin-bottom:4px;">';
+                    h += '<div style="font-size:12px;color:#67e8f9;margin-bottom:4px;">➕ 追加同种动物（库存 ' + sa.count + ' 只）：</div>';
+                    h += '<div style="display:flex;gap:4px;">';
+                    h += '<input type="number" id="addMoreCount" value="1" min="1" max="' + sa.count + '" style="width:60px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px;font-size:12px;color:#e0e0e0;text-align:center;">';
+                    h += '<button style="flex:1;padding:8px;background:rgba(6,182,212,0.2);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);border-radius:8px;font-size:12px;cursor:pointer;" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + saIdx + ',true)">追加放入</button>';
+                    h += '<button style="padding:8px 12px;background:rgba(6,182,212,0.2);color:#67e8f9;border:1px solid rgba(6,182,212,0.3);border-radius:8px;font-size:12px;cursor:pointer;" onclick="doPlaceAnimalAll(' + cageId + ',\'' + a.id + '\',' + sa.count + ')">全部放入</button>';
+                    h += '</div></div>';
+                }
+
                 // 喂食选项
                 h += '<div style="font-size:12px;color:#888;margin-bottom:4px;">喂食（种子+1，果实+5）：</div>';
 
@@ -2375,10 +2392,19 @@
             openPanel('panelCageAction');
         }
 
-        function doPlaceAnimal(cageId, animalId, animalIdx) {
-            var countInput = document.getElementById('placeCount_' + animalIdx);
+        function doPlaceAnimal(cageId, animalId, animalIdx, isAddMore) {
+            var countInput;
+            if (isAddMore) {
+                countInput = document.getElementById('addMoreCount');
+            } else {
+                countInput = document.getElementById('placeCount_' + animalIdx);
+            }
             var count = countInput ? parseInt(countInput.value) : 1;
             doAction('place_animal', { cageId: cageId, animalId: animalId, count: count });
+        }
+
+        function doPlaceAnimalAll(cageId, animalId, totalCount) {
+            doAction('place_animal', { cageId: cageId, animalId: animalId, count: totalCount });
         }
 
         function doFeedAnimal(cageId, feedType) {
@@ -2555,7 +2581,7 @@
         }
         function doVisit() { var fid = document.getElementById('visitFarmIdInput').value.trim().toUpperCase(); if (!fid) return; doAction('visit_farm', { farmId: fid }); }
         function doGoHome() { doAction('go_home'); }
-        function renderVisitFarm(owner, fid, plots, visitors) {
+        function renderVisitFarm(owner, fid, plots, visitors, cages) {
             lastVisitPlotsHash = '';
             visitingOwner = owner; visitingFarmId = fid;
             var h = '<div class="visit-farm-view">';
@@ -2596,7 +2622,7 @@
             if (vfv) vfv.innerHTML = h;
             else document.getElementById('visitContent').innerHTML += h;
 
-            // ★ 在主界面农场区域显示串门视图
+            //在主界面农场区域显示串门视图
             var farmArea = document.getElementById('farmArea');
             var farmTitle = document.querySelector('.farm-title');
             if (farmTitle) {
@@ -2631,18 +2657,50 @@
             }
             plotsGrid.innerHTML = visitHtml;
 
-            // ★ 显示串门状态条
+            //显示串门状态条
             var existingBar = document.getElementById('visitStatusBar');
             if (existingBar) existingBar.remove();
             var bar = document.createElement('div');
             bar.id = 'visitStatusBar';
             bar.style.cssText = 'padding:8px 12px;background:rgba(76,175,80,0.1);border-bottom:1px solid rgba(76,175,80,0.2);font-size:12px;color:#a5d6a7;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
             bar.innerHTML = '🏠 正在参观 <b>' + esc(owner) + '</b> 的农场（' + fid + '）<button style="padding:4px 12px;background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:6px;font-size:11px;cursor:pointer;" onclick="doGoHome()">🏡 回家</button>';
+
+            //串门时渲染好友的圈养区
+            var cagesGrid = document.getElementById('cagesGrid');
+            var cageTitle = document.querySelector('.cage-title');
+            if (cageTitle) {
+                cageTitle.textContent = '🐾 ' + esc(owner) + ' 的圈养区';
+            }
+            var cageHtml = '';
+            if (cages && cages.length > 0) {
+                for (var ci = 0; ci < cages.length; ci++) {
+                    var cage = cages[ci];
+                    if (cage.animal) {
+                        var isStarving = cage.animal.food < 0;
+                        var foodStatus = cage.animal.food >= 0 ? '🍖' + Math.floor(cage.animal.food) : '⚠️饥饿';
+                        cageHtml += '<div class="cage' + (isStarving ? ' starving' : '') + '">';
+                        cageHtml += '<span class="cage-icon">' + (cage.animal.icon || '🐾') + '</span>';
+                        cageHtml += '<span class="cage-name">' + esc(cage.animal.name) + '</span>';
+                        cageHtml += '<span class="cage-count">数量: ' + cage.animal.count + '</span>';
+                        cageHtml += '<span class="cage-food">' + foodStatus + '</span>';
+                        cageHtml += '<span class="cage-status">消耗' + cage.animal.foodPerHour + '/时</span>';
+                        cageHtml += '</div>';
+                    } else {
+                        cageHtml += '<div class="cage empty">';
+                        cageHtml += '<span class="cage-icon" style="opacity:0.3;">🟫</span>';
+                        cageHtml += '<span class="cage-name" style="color:#666;">空圈</span>';
+                        cageHtml += '</div>';
+                    }
+                }
+            } else {
+                cageHtml = '<div style="text-align:center;color:#666;font-size:12px;padding:10px;grid-column:1/-1;">没有圈养数据</div>';
+            }
+            cagesGrid.innerHTML = cageHtml;
             farmArea.parentNode.insertBefore(bar, farmArea);
         }
         var _lastVisitPlotsHash = '';
 
-        function updateVisitPlots(plots) {
+        function updateVisitPlots(plots, cages) {
             var newHash = JSON.stringify(plots);
             if (newHash === _lastVisitPlotsHash) return;
             _lastVisitPlotsHash = newHash;
@@ -2709,6 +2767,34 @@
                     vpGrid.innerHTML = panelHtml;
                 }
             }
+
+            //更新好友圈养区
+            if (cages) {
+                var cagesGrid = document.getElementById('cagesGrid');
+                if (cagesGrid) {
+                    var cageHtml = '';
+                    for (var ci = 0; ci < cages.length; ci++) {
+                        var cage = cages[ci];
+                        if (cage.animal) {
+                            var isStarving = cage.animal.food < 0;
+                            var foodStatus = cage.animal.food >= 0 ? '🍖' + Math.floor(cage.animal.food) : '⚠️饥饿';
+                            cageHtml += '<div class="cage' + (isStarving ? ' starving' : '') + '">';
+                            cageHtml += '<span class="cage-icon">' + (cage.animal.icon || '🐾') + '</span>';
+                            cageHtml += '<span class="cage-name">' + esc(cage.animal.name) + '</span>';
+                            cageHtml += '<span class="cage-count">数量: ' + cage.animal.count + '</span>';
+                            cageHtml += '<span class="cage-food">' + foodStatus + '</span>';
+                            cageHtml += '<span class="cage-status">消耗' + cage.animal.foodPerHour + '/时</span>';
+                            cageHtml += '</div>';
+                        } else {
+                            cageHtml += '<div class="cage empty">';
+                            cageHtml += '<span class="cage-icon" style="opacity:0.3;">🟫</span>';
+                            cageHtml += '<span class="cage-name" style="color:#666;">空圈</span>';
+                            cageHtml += '</div>';
+                        }
+                    }
+                    cagesGrid.innerHTML = cageHtml;
+                }
+            }
         }
 
         function openInventory() { doAction('inventory'); openPanel('panelInv'); }
@@ -2731,7 +2817,7 @@
             } else { h += '<div class="inv-empty">没有果实</div>'; }
             h += '</div></div>';
 
-            // ★ 新增：动物库存
+            //动物库存
             var animals = (playerData && playerData.animals) ? playerData.animals : [];
             h += '<div class="inv-section"><div class="inv-section-title">🐾 动物（未入圈）</div><div class="inv-grid">';
             if (animals.length > 0) {
@@ -2766,13 +2852,13 @@
                 return;
             }
 
-            // ★ 获取玩家当前水壶等级
+            //  获取玩家当前水壶等级
             var currentWaterLevel = (playerData && playerData.waterBoostLevel) ? playerData.waterBoostLevel : 0;
 
             var seeds = shop.items.filter(function (it) { return it.type === 'seed'; });
             var fertilizers = shop.items.filter(function (it) { return it.type === 'fertilizer'; });
 
-            // ★ 分离水壶和其他工具
+            //  分离水壶和其他工具
             var waterTools = shop.items.filter(function (it) {
                 if (it.id.startsWith('watering_can_lv')) {
                     var level = parseInt(it.id.replace('watering_can_lv', '')) || 0;
@@ -2812,7 +2898,7 @@
                 }
             }
 
-            // ★ 显示其他工具（开垦令等）
+            //  显示其他工具（开垦令等）
             if (otherTools.length > 0) {
                 h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🔨 工具</div>';
                 for (var k = 0; k < otherTools.length; k++) {
@@ -2822,7 +2908,7 @@
                 }
             }
 
-            // ★ 显示水壶升级
+            //  显示水壶升级
             if (waterTools.length > 0) {
                 h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">💧 水壶升级</div>';
                 for (var m = 0; m < waterTools.length; m++) {
@@ -2836,7 +2922,7 @@
                 }
             }
 
-            // ★ 显示动物
+            //  显示动物
             var animalItems = shop.items.filter(function (it) { return it.type === 'animal'; });
             if (animalItems.length > 0) {
                 h += '<div style="font-size:12px;color:#fcd34d;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🐾 动物</div>';
@@ -2854,7 +2940,7 @@
                 }
             }
 
-            // ★ 显示宠物
+            //  显示宠物
             var petItems = shop.items.filter(function (it) { return it.type === 'pet'; });
             if (petItems.length > 0) {
                 h += '<div style="font-size:12px;color:#c4b5fd;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🐱 宠物</div>';
@@ -3073,7 +3159,7 @@
                 }
             }
 
-            // ★ 新增：卖出动物（未入圈的库存动物）
+            //卖出动物（未入圈的库存动物）
             h += '<div style="font-size:12px;color:#fcd34d;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🐾 动物卖出（未入圈）</div>';
             var animals = playerData.animals || [];
             if (animals.length === 0) {
@@ -3095,7 +3181,7 @@
 
         function doSellFruit(fruitId, count) { doAction('sell_fruit', { fruitId: fruitId, count: count }); }
 
-        // ★ 卖出种子
+        //  卖出种子
         function doSellSeed(seedId, count) { doAction('sell_seed', { seedId: seedId, count: count }); }
 
         function doSellStockAnimal(animalId, count) {
@@ -3341,7 +3427,7 @@
             var text = input.value.trim();
             if (!text) return;
             doAction('chat', { text: text, channel: chatChannel });
-            // ★ 获取自己的称号显示
+            //  获取自己的称号显示
             var myTitle = null;
             if (playerData && playerData.titles && playerData.titles[currentWorld.id]) {
                 myTitle = playerData.titles[currentWorld.id];
@@ -3360,7 +3446,7 @@
         function addChatMsg(from, text, channel, isMe, titleInfo) {
             var div = document.createElement('div');
             div.className = 'msg-item msg-chat';
-            // ★ 只在农场频道显示标签
+            //  只在农场频道显示标签
             var chLabel = channel === 'farm' ? '[农场] ' : '';
             var nc = (isMe || from === username) ? 'me' : '';
             // 添加称号显示
@@ -3376,7 +3462,7 @@
         function addPrivateMsg(from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '🔒 <b>' + esc(from) + '</b> 悄悄对你说: ' + esc(text); appendMsg(div); }
         function addGroupMsg(groupName, from, text) { var div = document.createElement('div'); div.className = 'msg-item msg-private'; div.innerHTML = '💬 [' + esc(groupName) + '] <b>' + esc(from) + '</b>: ' + esc(text); appendMsg(div); }
         function addSysMsg(text) { var d = document.createElement('div'); d.className = 'msg-item msg-system'; d.textContent = text; appendMsg(d); }
-        // ★ 只显示好友的上下线
+        //  只显示好友的上下线
         function checkAndShowFriendStatus(targetUser, isOnline) {
             if (!cachedFriendList || cachedFriendList.length === 0) return;
             if (cachedFriendList.indexOf(targetUser) === -1) return;
@@ -3710,7 +3796,7 @@
             doAction('mail_delete_all');
         }
 
-        // ★ 页面加载时恢复保存的账号
+        //  页面加载时恢复保存的账号
         loadSavedAccount();
         connectWS();
     </script>
