@@ -1372,7 +1372,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.8.4</h1>
+            <h1>🌾 阡陌之诗 v1.8.5</h1>
             <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -3219,7 +3219,9 @@
             }
 
             h += '<div style="font-size:12px;color:#a5d6a7;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🌱 种子卖出</div>';
-            var sellableSeeds = (playerData.seeds || []).filter(function (s) { return s.source === 'bought' || s.source === 'harvest'; });
+            var sellableSeeds = (playerData.seeds || []).filter(function (s) {
+                return s.source && s.source !== 'starter';
+            });
             if (sellableSeeds.length === 0) {
                 h += '<div style="color:#666;font-size:12px;padding:8px;">没有可卖的种子（初始种子无法卖出）</div>';
             } else {
@@ -3228,8 +3230,10 @@
                     var seedPrice = 0;
                     if (s.source === 'bought') {
                         seedPrice = Math.floor(50 / 2);
-                    } else if (s.source === 'harvest') {
-                        seedPrice = Math.floor((s.fruitValue || 10) / 3);
+                    } else if (s.fruitValue) {
+                        seedPrice = Math.floor(s.fruitValue / 3);
+                    } else {
+                        seedPrice = 3; // 兜底最低价
                     }
                     var sourceLabel = s.source === 'bought' ? '💳 购买' : '🌾 收获';
                     h += '<div class="sell-item"><div class="sl-info"><div class="sl-name">' + (s.icon || '🌱') + ' ' + esc(s.name) + '</div><div class="sl-detail">数量: ' + s.count + ' · 单价: 💰' + seedPrice + ' <span style="color:#888;font-size:10px;">(' + sourceLabel + ')</span></div></div>';
