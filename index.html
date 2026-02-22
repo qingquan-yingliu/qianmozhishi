@@ -1366,6 +1366,10 @@
 </head>
 
 <body>
+    <div id="toastBar"
+        style="display:none;position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 28px;border-radius:20px;font-size:14px;font-weight:600;pointer-events:none;transition:opacity 0.5s;white-space:nowrap;max-width:90vw;text-align:center;">
+    </div>
+
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
             <h1>🌾 阡陌之诗 v1.8.2</h1>
@@ -1870,7 +1874,7 @@
                 case 'shop_buy':
                     if (ok) {
                         addActionOk(msg.msg);
-                        if (document.getElementById('panelShop').classList.contains('show')) showPanelTip('panelShop', msg.msg, true);
+                        showToast(msg.msg, true);
                         if (msg.money !== undefined && playerData) playerData.money = msg.money;
                         if (msg.waterBoostLevel !== undefined && playerData) playerData.waterBoostLevel = msg.waterBoostLevel;
                         if (msg.seeds && playerData) playerData.seeds = msg.seeds;
@@ -1881,22 +1885,23 @@
                         }, 150);
                     } else {
                         addActionFail(msg.msg);
-                        if (document.getElementById('panelShop').classList.contains('show')) showPanelTip('panelShop', msg.msg, false);
+                        showToast(msg.msg, false);
                     }
                     break;
                 case 'sell_fruit':
-                    if (ok) { if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true); openSell(); } else { if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false); }
+                    if (ok) { showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'sell_seed':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true); openSell(); } else { addActionFail(msg.msg); if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'sell_stock_animal':
                     if (ok) {
-                        if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, true);
+                        showToast(msg.msg, true);
                         if (msg.animals && playerData) playerData.animals = msg.animals;
                         openSell();
                     } else {
-                        if (document.getElementById('panelSell').classList.contains('show')) showPanelTip('panelSell', msg.msg, false);
+                        addActionFail(msg.msg);
+                        showToast(msg.msg, false);
                     }
                     break;
                 case 'wild_areas':
@@ -2008,16 +2013,16 @@
                     }
                     break;
                 case 'friend_request': case 'friend_accept': case 'friend_reject': case 'friend_remove':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelFriends').classList.contains('show')) showPanelTip('panelFriends', msg.msg, true); doAction('friend_list'); } else { addActionFail(msg.msg); if (document.getElementById('panelFriends').classList.contains('show')) showPanelTip('panelFriends', msg.msg, false); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); doAction('friend_list'); } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'trade_create':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelTrade').classList.contains('show')) showPanelTip('panelTrade', msg.msg, true); closePanel('panelTrade'); } else { addActionFail(msg.msg); if (document.getElementById('panelTrade').classList.contains('show')) showPanelTip('panelTrade', msg.msg, false); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); closePanel('panelTrade'); } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'trade_list':
                     if (ok) renderTradeList(msg.trades);
                     break;
                 case 'trade_accept': case 'trade_reject': case 'trade_cancel':
-                    if (ok) { addActionOk(msg.msg); if (document.getElementById('panelTrade').classList.contains('show')) showPanelTip('panelTrade', msg.msg, true); doAction('trade_list'); } else { addActionFail(msg.msg); if (document.getElementById('panelTrade').classList.contains('show')) showPanelTip('panelTrade', msg.msg, false); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); doAction('trade_list'); } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'private_msg':
                     if (ok) addActionOk(msg.msg); else addActionFail(msg.msg);
@@ -2061,51 +2066,45 @@
                     }
                     break;
                 case 'rename_pet':
-                    if (ok) { addActionOk(msg.msg); if (msg.pets && playerData) playerData.pets = msg.pets; if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, true); doAction('my_pets'); }
-                    else { addActionFail(msg.msg); if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, false); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); if (msg.pets && playerData) playerData.pets = msg.pets; doAction('my_pets'); }
+                    else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'pet_adventure':
                     if (ok) {
                         addActionOk(msg.msg);
+                        showToast(msg.msg, true);
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         if (document.getElementById('panelPetDetail').classList.contains('show')) {
-                            showPanelTip('panelPetDetail', msg.msg, true);
-                            // 刷新详情面板内容
                             var adventurePetId = msg.petId || (msg.pets && msg.pets.length > 0 ? null : null);
                             if (adventurePetId) openPetDetail(adventurePetId);
                         }
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, true);
                         doAction('my_pets');
                     } else {
                         addActionFail(msg.msg);
-                        if (document.getElementById('panelPetDetail').classList.contains('show')) showPanelTip('panelPetDetail', msg.msg, false);
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, false);
+                        showToast(msg.msg, false);
                     }
                     break;
                 case 'pet_collect':
                     if (ok) {
                         addActionOk(msg.msg);
+                        showToast(msg.msg, true);
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         if (msg.seeds && playerData) playerData.seeds = msg.seeds;
                         if (msg.fruits && playerData) playerData.fruits = msg.fruits;
                         if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
                         if (document.getElementById('panelPetDetail').classList.contains('show')) {
-                            showPanelTip('panelPetDetail', msg.msg, true);
                             if (msg.petId) openPetDetail(msg.petId);
                         }
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, true);
                         doAction('my_pets');
                     } else {
                         addActionFail(msg.msg);
-                        if (document.getElementById('panelPetDetail').classList.contains('show')) showPanelTip('panelPetDetail', msg.msg, false);
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, false);
+                        showToast(msg.msg, false);
                     }
                     break;
                 case 'pet_interact':
                     if (ok) {
                         addActionOk(msg.msg);
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, true);
-                        if (document.getElementById('panelPetDetail').classList.contains('show')) showPanelTip('panelPetDetail', msg.msg, true);
+                        showToast(msg.msg, true);
                         if (msg.pets && playerData) {
                             playerData.pets = msg.pets;
                             if (document.getElementById('panelPetDetail').classList.contains('show') && msg.petId) {
@@ -2115,19 +2114,18 @@
                         doAction('my_pets');
                     } else {
                         addActionFail(msg.msg);
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, false);
-                        if (document.getElementById('panelPetDetail').classList.contains('show')) showPanelTip('panelPetDetail', msg.msg, false);
+                        showToast(msg.msg, false);
                     }
                     break;
                 case 'release_pet':
                     if (ok) {
                         addActionOk(msg.msg);
+                        showToast(msg.msg, true);
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
                         closePanel('panelPetDetail');
-                        if (document.getElementById('panelPets').classList.contains('show')) showPanelTip('panelPets', msg.msg, true);
                         doAction('my_pets');
-                    } else { addActionFail(msg.msg); if (document.getElementById('panelPetDetail').classList.contains('show')) showPanelTip('panelPetDetail', msg.msg, false); }
+                    } else { addActionFail(msg.msg); showToast(msg.msg, false); }
                     break;
                 case 'world_ranking':
                     if (ok) renderRankingPanel(msg.ranking, msg.myRank);
@@ -2140,27 +2138,26 @@
                     break;
                 case 'mail_claim':
                     if (ok) {
-                        if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true);
                         if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
                         if (msg.seeds && playerData) playerData.seeds = msg.seeds;
                         if (msg.fruits && playerData) playerData.fruits = msg.fruits;
                         if (msg.pets && playerData) playerData.pets = msg.pets;
                         doAction('mail_list');
-                    } else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    } else { addActionFail(msg.msg); }
                     break;
                 case 'mail_delete':
-                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
-                    else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    if (ok) { doAction('mail_list'); }
+                    else { addActionFail(msg.msg); }
                     break;
                 case 'mail_delete_all':
-                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
-                    else { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, false); }
+                    if (ok) { doAction('mail_list'); }
+                    else { addActionFail(msg.msg); }
                     break;
                 case 'mail_read':
                     if (ok) { doAction('mail_list'); }
                     break;
                 case 'mail_read_all':
-                    if (ok) { if (document.getElementById('panelMail').classList.contains('show')) showPanelTip('panelMail', msg.msg, true); doAction('mail_list'); }
+                    if (ok) { showToast(msg.msg, true); doAction('mail_list'); }
                     break;
                 default:
                     if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
@@ -2619,57 +2616,32 @@
         // ============================================================
         //  通用面板内提示
         // ============================================================
-        function showPanelTip(panelId, msg, isSuccess) {
-            var tipId = panelId + '_tip';
-            var tip = document.getElementById(tipId);
-            if (!tip) return;
-            tip.style.display = 'block';
-            tip.style.background = isSuccess ? 'rgba(76,175,80,0.95)' : 'rgba(239,68,68,0.92)';
-            tip.style.color = isSuccess ? '#fff' : '#fff';
-            tip.style.borderColor = isSuccess ? 'rgba(76,175,80,0.5)' : 'rgba(239,68,68,0.5)';
-            tip.textContent = msg;
-            if (tip._hideTimer) clearTimeout(tip._hideTimer);
-            tip._hideTimer = setTimeout(function () {
-                if (tip) {
-                    tip.style.opacity = '0';
-                    setTimeout(function () {
-                        if (tip) { tip.style.display = 'none'; tip.style.opacity = '1'; }
-                    }, 300);
-                }
-            }, 3000);
-        }
-
-        function makePanelTipHtml(panelId) {
-            return '<div id="' + panelId + '_tip" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600;position:sticky;top:0;z-index:10;transition:opacity 0.3s;"></div>';
+        function showToast(msg, isSuccess) {
+            var toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;color:#fff;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.3s,top 0.3s;white-space:nowrap;max-width:90vw;text-align:center;' +
+                (isSuccess ? 'background:rgba(76,175,80,0.95);' : 'background:rgba(239,68,68,0.92);');
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            requestAnimationFrame(function () {
+                toast.style.opacity = '1';
+                toast.style.top = '16%';
+            });
+            setTimeout(function () {
+                toast.style.opacity = '0';
+                toast.style.top = '12%';
+                setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+            }, 2500);
         }
 
         var _pendingWildTip = null;
         function showWildTip(msg, isSuccess) {
-            var tip = document.getElementById('wildActionTip');
-            if (!tip) return;
-            tip.style.display = 'block';
-            tip.style.opacity = '1';
-            tip.style.background = isSuccess ? 'rgba(76,175,80,0.95)' : 'rgba(239,68,68,0.92)';
-            tip.style.border = '1px solid ' + (isSuccess ? 'rgba(76,175,80,0.5)' : 'rgba(239,68,68,0.5)');
-            tip.style.color = '#fff';
-            tip.style.fontWeight = '600';
-            tip.textContent = msg;
-            if (tip._hideTimer) clearTimeout(tip._hideTimer);
-            tip._hideTimer = setTimeout(function () {
-                if (tip) {
-                    tip.style.opacity = '0';
-                    setTimeout(function () {
-                        if (tip) { tip.style.display = 'none'; tip.style.opacity = '1'; }
-                    }, 300);
-                }
-            }, 3000);
+            showToast(msg, isSuccess);
         }
 
         function openWild() { doAction('wild_areas'); openPanel('panelWild'); }
 
         function renderWildPanel(areas, stamina, staminaMax) {
             var h = '<div style="font-size:12px;color:#888;margin-bottom:10px;">⚡ 体力: ' + stamina + '/' + staminaMax + '</div>';
-            h += '<div id="wildActionTip" style="display:none;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600;position:sticky;top:0;z-index:10;transition:opacity 0.3s;"></div>';
             if (!areas || areas.length === 0) {
                 h += '<div style="color:#666;text-align:center;padding:20px;">这个世界没有野外区域</div>';
             } else {
@@ -2907,7 +2879,7 @@
 
         function openInventory() { doAction('inventory'); openPanel('panelInv'); }
         function renderInventoryPanel(seeds, fruits, items, money) {
-            var h = makePanelTipHtml('panelInv');
+            var h = '';
             h += '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 金币: ' + money + '</div>';
             h += '<div class="inv-section"><div class="inv-section-title">🌱 种子</div><div class="inv-grid">';
             if (seeds && seeds.length > 0) {
@@ -2953,7 +2925,7 @@
 
         function openShop() { doAction('shop_list'); openPanel('panelShop'); }
         function renderShopPanel(shop, money) {
-            var h = makePanelTipHtml('panelShop');
+            var h = ''
             h += '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 你的金币: ' + money + '</div>';
             if (!shop || !shop.items || shop.items.length === 0) {
                 h += '<div style="color:#666;text-align:center;padding:20px;">商店空空如也</div>';
@@ -3111,11 +3083,11 @@
 
         function renderRankingPanel(ranking, myRank) {
             if (!ranking || ranking.length === 0) {
-                document.getElementById('rankingContent').innerHTML = makePanelTipHtml('panelRanking') + '<div style="color:#666;text-align:center;padding:20px;font-size:12px;">暂无排行榜数据</div>';
+                document.getElementById('rankingContent').innerHTML = '<div style="color:#666;text-align:center;padding:20px;font-size:12px;">暂无排行榜数据</div>';
                 return;
             }
 
-            var h = makePanelTipHtml('panelRanking');
+            var h = ''
 
             if (myRank !== undefined && myRank !== null) {
                 var myData = ranking[myRank];
@@ -3217,7 +3189,7 @@
 
         function renderSellPanel() {
             if (!playerData) return;
-            var h = makePanelTipHtml('panelSell');
+            var h = ''
             h += '<div style="font-size:13px;color:#fcd34d;margin-bottom:10px;">💰 当前金币: ' + playerData.money + '</div>';
 
             h += '<div style="font-size:12px;color:#a5d6a7;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🍎 果实卖出</div>';
@@ -3287,7 +3259,7 @@
         }
 
         function openTrade() {
-            var h = makePanelTipHtml('panelTrade');
+            var h = ''
             h += '<div style="margin-bottom:14px;">';
             h += '<button style="width:100%;padding:10px;background:rgba(251,191,36,0.2);color:#fcd34d;border:1px solid rgba(251,191,36,0.3);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:8px;" onclick="showTradeForm()">📝 发起新交易</button>';
             h += '<button style="width:100%;padding:10px;background:rgba(255,255,255,0.05);color:#aaa;border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:13px;cursor:pointer;" onclick="doAction(\'trade_list\')">📋 查看交易列表</button>';
@@ -3462,7 +3434,7 @@
         function openFriends() { doAction('friend_list'); openPanel('panelFriends'); }
         function renderFriendsPanel(friends, requests) {
             cachedFriendList = (friends || []).map(function (f) { return f.username; });
-            var h = makePanelTipHtml('panelFriends');
+            var h = ''
             h += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
             h += '<input type="text" id="addFriendInput" placeholder="输入昵称" style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:13px;color:#e0e0e0;outline:none;">';
             h += '<button style="padding:8px 14px;background:#4caf50;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;" onclick="doAddFriend()">添加</button></div>';
@@ -3648,7 +3620,7 @@
         }
 
         function renderPetsPanel(pets) {
-            var h = makePanelTipHtml('panelPets');
+            var h = ''
             if (!pets || pets.length === 0) {
                 h += '<div style="text-align:center;color:#666;padding:30px;">';
                 h += '<div style="font-size:36px;margin-bottom:10px;">🐾</div>';
@@ -3704,7 +3676,7 @@
             var isOnAdventure = pet.adventureEndTime && now < pet.adventureEndTime;
             var adventureReady = pet.adventureEndTime && now >= pet.adventureEndTime;
 
-            var h = makePanelTipHtml('panelPetDetail');
+            var h = ''
             h += '<div style="text-align:center;margin-bottom:14px;">';
             h += '<div style="font-size:48px;margin-bottom:6px;">' + (pet.speciesIcon || '🐾') + '</div>';
             h += '<div style="font-size:18px;color:#c4b5fd;font-weight:600;">' + esc(pet.name) + '</div>';
@@ -3793,7 +3765,7 @@
         }
 
         function renderMailPanel(mails) {
-            var h = makePanelTipHtml('panelMail');
+            var h = ''
             if (!mails || mails.length === 0) {
                 h += '<div style="text-align:center;color:#666;padding:30px;">';
                 h += '<div style="font-size:36px;margin-bottom:10px;">📭</div>';
