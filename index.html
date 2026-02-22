@@ -1529,7 +1529,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.3</h1>
+            <h1>🌾 阡陌之诗 v1.9.4</h1>
             <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -4639,179 +4639,146 @@
         }
 
         function renderEventsPanel(events, playerProgress) {
-            var h = '';
-            var now = Date.now() + serverTimeOffset;
-            playerProgress = playerProgress || {};
+        var h = '';
+        var now = Date.now() + serverTimeOffset;
+        playerProgress = playerProgress || {};
 
-            if (!events || events.length === 0) {
-                h += '<div style="text-align:center;color:#555;padding:40px 20px;">';
-                h += '<div style="font-size:36px;margin-bottom:10px;">🎉</div>';
-                h += '<div style="font-size:14px;color:#888;">暂无活动</div>';
-                h += '<div style="font-size:12px;color:#555;margin-top:6px;">敬请期待天道开启新活动</div>';
-                h += '</div>';
-                document.getElementById('eventsContent').innerHTML = h;
-                return;
-            }
-
-            // 分离节日活动和普通活动
-            var holidayEvents = events.filter(function (e) { return e.type === 'holiday' || e.holiday; });
-            var normalEvents = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
-
-            // 先显示节日活动
-            if (holidayEvents.length > 0) {
-                h += '<div style="margin-bottom:10px;">';
-                h += '<div style="font-size:12px;color:#fcd34d;margin-bottom:6px;">🎊 节日活动</div>';
-
-                for (var i = 0; i < holidayEvents.length; i++) {
-                    var ev = holidayEvents[i];
-                    var status = getEventStatus(ev, now);
-                    var statusClass = status === 'active' ? 'active-event' : status === 'upcoming' ? 'upcoming-event' : 'ended-event';
-                    var statusLabel = status === 'active' ? '<span class="ec-status st-active">进行中</span>' :
-                        status === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' :
-                            '<span class="ec-status st-ended">已结束</span>';
-
-                    h += '<div class="event-card ' + statusClass + '">';
-                    h += '<div class="ec-header">';
-                    h += '<span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>';
-                    h += statusLabel;
-                    h += '</div>';
-
-                    if (ev.desc) {
-                        h += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
-                    }
-
-                    // 活动效果显示
-                    var effects = [];
-                    if (ev.doubleHarvest) effects.push('🌾 双倍收获');
-                    if (ev.doubleGather) effects.push('🌿 双倍采集');
-                    if (ev.doubleMoney) effects.push('💰 双倍金币');
-                    if (effects.length > 0) {
-                        h += '<div style="font-size:11px;color:#a5d6a7;margin:4px 0;">✨ ' + effects.join(' · ') + '</div>';
-                    }
-
-                    // 特殊掉落
-                    if (ev.specialDrops && ev.specialDrops.length > 0) {
-                        h += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
-                        for (var j = 0; j < ev.specialDrops.length; j++) {
-                            var d = ev.specialDrops[j];
-                            var itemName = d.data ? d.data.name : d.name;
-                            h += (d.icon || '🎁') + itemName + '(' + d.chance + '%) ';
-                        }
-                        h += '</div>';
-                    }
-
-                    // 限定称号
-                    if (ev.limitedTitles && ev.limitedTitles.length > 0) {
-                        h += '<div style="font-size:10px;color:#fcd34d;margin:2px 0;">👑 限定称号：';
-                        for (var j = 0; j < ev.limitedTitles.length; j++) {
-                            var t = ev.limitedTitles[j];
-                            h += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> ';
-                        }
-                        h += '</div>';
-                    }
-
-                    // 任务列表（带进度条）
-                    if (ev.tasks && ev.tasks.length > 0) {
-                        var eventProgress = playerProgress[ev.id] || {};
-                        // 确保 tasks 数组存在（可能是空对象时转为空数组）
-                        var progressTasks = eventProgress.tasks || [];
-                        h += '<div style="margin-top:8px;">';
-                        for (var j = 0; j < ev.tasks.length; j++) {
-                            var task = ev.tasks[j];
-                            var progress = (progressTasks[j] !== undefined && progressTasks[j] !== null) ? progressTasks[j] : 0;
-                            var percent = Math.min(100, Math.floor((progress / task.targetCount) * 100));
-                            var completed = progress >= task.targetCount;
-
-                            h += '<div style="background:' + (completed ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (completed ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:6px;margin-bottom:4px;">';
-                            h += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
-                            h += '<span style="color:' + (completed ? '#a5d6a7' : '#ccc') + ';">' + esc(task.desc) + '</span>';
-                            h += '<span style="color:' + (completed ? '#4ade80' : '#888') + ';">' + progress + '/' + task.targetCount + '</span>';
-                            h += '</div>';
-                            h += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
-                            h += '<div style="height:100%;width:' + percent + '%;background:' + (completed ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
-                            h += '</div>';
-                            if (task.rewardTitle && completed) {
-                                h += '<div style="font-size:10px;color:' + task.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(task.rewardTitle.name) + ']</div>';
-                            }
-                            h += '</div>';
-                        }
-                        h += '</div>';
-                    }
-
-                    // 时间
-                    var startStr = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    var endStr = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    if (startStr || endStr) {
-                        h += '<div class="ec-time">🕐 ' + startStr + (endStr ? ' ~ ' + endStr : '') + '</div>';
-                    }
-
-                    // 倒计时
-                    if (status === 'active' && ev.endTime) {
-                        var remain = ev.endTime - now;
-                        h += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(remain) + '</div>';
-                    } else if (status === 'upcoming' && ev.startTime) {
-                        var until = ev.startTime - now;
-                        h += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(until) + ' 后开始</div>';
-                    }
-
-                    h += '</div>';
-                }
-                h += '</div>';
-            }
-
-            // 显示普通活动
-            if (normalEvents.length > 0) {
-                h += '<div style="margin-top:' + (holidayEvents.length > 0 ? '16px' : '0') + ';">';
-                h += '<div style="font-size:12px;color:#a5d6a7;margin-bottom:6px;">📢 普通活动</div>';
-
-                // 按状态排序：进行中 > 即将开始 > 已结束
-                var sorted = normalEvents.slice().sort(function (a, b) {
-                    var sa = getEventSortOrder(a, now);
-                    var sb = getEventSortOrder(b, now);
-                    return sa - sb;
-                });
-
-                for (var i = 0; i < sorted.length; i++) {
-                    var ev = sorted[i];
-                    var status = getEventStatus(ev, now);
-                    var statusClass = status === 'active' ? 'active-event' : status === 'upcoming' ? 'upcoming-event' : 'ended-event';
-                    var statusLabel = status === 'active' ? '<span class="ec-status st-active">进行中</span>' :
-                        status === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' :
-                            '<span class="ec-status st-ended">已结束</span>';
-
-                    h += '<div class="event-card ' + statusClass + '">';
-                    h += '<div class="ec-header">';
-                    h += '<span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>';
-                    h += statusLabel;
-                    h += '</div>';
-
-                    if (ev.desc) {
-                        h += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
-                    }
-
-                    // 时间显示
-                    var startStr = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    var endStr = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-                    if (startStr || endStr) {
-                        h += '<div class="ec-time">🕐 ' + startStr + (endStr ? ' ~ ' + endStr : '') + '</div>';
-                    }
-
-                    // 倒计时
-                    if (status === 'active' && ev.endTime) {
-                        var remain = ev.endTime - now;
-                        h += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(remain) + '</div>';
-                    } else if (status === 'upcoming' && ev.startTime) {
-                        var until = ev.startTime - now;
-                        h += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(until) + ' 后开始</div>';
-                    }
-
-                    h += '</div>';
-                }
-                h += '</div>';
-            }
-
+        if (!events || events.length === 0) {
+            h += '<div style="text-align:center;color:#555;padding:40px 20px;">';
+            h += '<div style="font-size:36px;margin-bottom:10px;">🎉</div>';
+            h += '<div style="font-size:14px;color:#888;">暂无活动</div>';
+            h += '<div style="font-size:12px;color:#555;margin-top:6px;">敬请期待天道开启新活动</div>';
+            h += '</div>';
             document.getElementById('eventsContent').innerHTML = h;
+            return;
         }
+
+        // 统一渲染函数，避免重复代码
+        function renderEventItem(ev, isHoliday) {
+            var status = getEventStatus(ev, now);
+            var statusClass = status === 'active' ? 'active-event' : status === 'upcoming' ? 'upcoming-event' : 'ended-event';
+            var statusLabel = status === 'active' ? '<span class="ec-status st-active">进行中</span>' :
+                status === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' :
+                    '<span class="ec-status st-ended">已结束</span>';
+
+            var html = '<div class="event-card ' + statusClass + '">';
+            html += '<div class="ec-header">';
+            html += '<span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>';
+            html += statusLabel;
+            html += '</div>';
+
+            if (ev.desc) {
+                html += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
+            }
+
+            // 活动效果显示
+            var effects = [];
+            if (ev.doubleHarvest) effects.push('🌾 双倍收获');
+            if (ev.doubleGather) effects.push('🌿 双倍采集');
+            if (ev.doubleMoney) effects.push('💰 双倍金币');
+            if (effects.length > 0) {
+                html += '<div style="font-size:11px;color:#a5d6a7;margin:4px 0;">✨ ' + effects.join(' · ') + '</div>';
+            }
+
+            // 特殊掉落
+            if (ev.specialDrops && ev.specialDrops.length > 0) {
+                html += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
+                for (var j = 0; j < ev.specialDrops.length; j++) {
+                    var d = ev.specialDrops[j];
+                    var itemName = d.data ? d.data.name : d.name;
+                    html += (d.icon || '🎁') + itemName + '(' + d.chance + '%) ';
+                }
+                html += '</div>';
+            }
+
+            // 限定称号
+            if (ev.limitedTitles && ev.limitedTitles.length > 0) {
+                html += '<div style="font-size:10px;color:#fcd34d;margin:2px 0;">👑 限定称号：';
+                for (var j = 0; j < ev.limitedTitles.length; j++) {
+                    var t = ev.limitedTitles[j];
+                    html += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> ';
+                }
+                html += '</div>';
+            }
+
+            // 任务列表（带进度条）
+            if (ev.tasks && ev.tasks.length > 0) {
+                var eventProgress = playerProgress[ev.id] || {};
+                var progressTasks = eventProgress.tasks || [];
+                html += '<div style="margin-top:8px;">';
+                for (var j = 0; j < ev.tasks.length; j++) {
+                    var task = ev.tasks[j];
+                    var progress = (progressTasks[j] !== undefined && progressTasks[j] !== null) ? progressTasks[j] : 0;
+                    var percent = Math.min(100, Math.floor((progress / task.targetCount) * 100));
+                    var completed = progress >= task.targetCount;
+
+                    html += '<div style="background:' + (completed ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (completed ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:6px;margin-bottom:4px;">';
+                    html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+                    html += '<span style="color:' + (completed ? '#a5d6a7' : '#ccc') + ';">' + esc(task.desc) + '</span>';
+                    html += '<span style="color:' + (completed ? '#4ade80' : '#888') + ';">' + progress + '/' + task.targetCount + '</span>';
+                    html += '</div>';
+                    html += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
+                    html += '<div style="height:100%;width:' + percent + '%;background:' + (completed ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
+                    html += '</div>';
+                    if (task.rewardTitle && completed) {
+                        html += '<div style="font-size:10px;color:' + task.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(task.rewardTitle.name) + ']</div>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            // 时间与倒计时
+            var startStr = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            var endStr = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            if (startStr || endStr) {
+                html += '<div class="ec-time">🕐 ' + startStr + (endStr ? ' ~ ' + endStr : '') + '</div>';
+            }
+
+            if (status === 'active' && ev.endTime) {
+                var remain = ev.endTime - now;
+                html += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(remain) + '</div>';
+            } else if (status === 'upcoming' && ev.startTime) {
+                var until = ev.startTime - now;
+                html += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(until) + ' 后开始</div>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // 分离节日活动和普通活动
+        var holidayEvents = events.filter(function (e) { return e.type === 'holiday' || e.holiday; });
+        var normalEvents = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
+
+        // 渲染节日活动
+        if (holidayEvents.length > 0) {
+            h += '<div style="margin-bottom:10px;">';
+            h += '<div style="font-size:12px;color:#fcd34d;margin-bottom:6px;">🎊 节日活动</div>';
+            for (var i = 0; i < holidayEvents.length; i++) {
+                h += renderEventItem(holidayEvents[i], true);
+            }
+            h += '</div>';
+        }
+
+        // 渲染普通活动
+        if (normalEvents.length > 0) {
+            h += '<div style="margin-top:' + (holidayEvents.length > 0 ? '16px' : '0') + ';">';
+            h += '<div style="font-size:12px;color:#a5d6a7;margin-bottom:6px;">📢 普通活动</div>';
+            // 排序：进行中 > 即将开始 > 已结束
+            var sorted = normalEvents.slice().sort(function (a, b) {
+                var sa = getEventSortOrder(a, now);
+                var sb = getEventSortOrder(b, now);
+                return sa - sb;
+            });
+            for (var i = 0; i < sorted.length; i++) {
+                h += renderEventItem(sorted[i], false);
+            }
+            h += '</div>';
+        }
+
+        document.getElementById('eventsContent').innerHTML = h;
+    }
 
         function getEventStatus(ev, now) {
             if (ev.startTime && now < ev.startTime) return 'upcoming';
