@@ -1529,7 +1529,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9</h1>
+            <h1>🌾 阡陌之诗 v1.9.1</h1>
             <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -1956,6 +1956,7 @@
                 case 'group_invite': addSysMsg(msg.inviter + ' 邀请你加入群聊「' + msg.group.name + '」'); break;
                 case 'player_update':
                     playerData = msg.player;
+                    if (!playerData.holidayTasks) playerData.holidayTasks = {};
                     refreshFarm();
                     // 如果设置面板打开，重新渲染它
                     if (document.getElementById('panelSettings').classList.contains('show')) {
@@ -2413,7 +2414,7 @@
                     if (ok) { showToast(msg.msg, true); doAction('mail_list'); }
                     break;
                 case 'event_list':
-                    if (ok) renderEventsPanel(msg.events || []);
+                    if (msg.ok) renderEventsPanel(msg.events, msg.playerProgress);
                     break;
                 case 'daily_tasks':
                     if (msg.ok) renderDailyTasksPanel(msg.dailyTasks, msg.perfectBonus);
@@ -4636,6 +4637,7 @@
         function renderEventsPanel(events) {
             var h = '';
             var now = Date.now() + serverTimeOffset;
+            playerProgress = playerProgress || {};
 
             if (!events || events.length === 0) {
                 h += '<div style="text-align:center;color:#555;padding:40px 20px;">';
@@ -4679,7 +4681,6 @@
                     if (ev.doubleHarvest) effects.push('🌾 双倍收获');
                     if (ev.doubleGather) effects.push('🌿 双倍采集');
                     if (ev.doubleMoney) effects.push('💰 双倍金币');
-
                     if (effects.length > 0) {
                         h += '<div style="font-size:11px;color:#a5d6a7;margin:4px 0;">✨ ' + effects.join(' · ') + '</div>';
                     }
@@ -4689,7 +4690,6 @@
                         h += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
                         for (var j = 0; j < ev.specialDrops.length; j++) {
                             var d = ev.specialDrops[j];
-                            // 如果有 data，显示具体物品名，否则显示 name
                             var itemName = d.data ? d.data.name : d.name;
                             h += (d.icon || '🎁') + itemName + '(' + d.chance + '%) ';
                         }
@@ -4706,32 +4706,28 @@
                         h += '</div>';
                     }
 
-                    // 任务列表（简要显示）
+                    // 任务列表（带进度条）
                     if (ev.tasks && ev.tasks.length > 0) {
-                        h += '<div style="font-size:10px;color:#a5d6a7;margin-top:2px;">📋 节日任务：';
+                        var eventProgress = playerProgress[ev.id] || { tasks: [] };
+                        h += '<div style="margin-top:8px;">';
                         for (var j = 0; j < ev.tasks.length; j++) {
-                            var t = ev.tasks[j];
-                            h += (j > 0 ? ' · ' : '') + t.desc;
-                        }
-                        h += '</div>';
-                    }
+                            var task = ev.tasks[j];
+                            var progress = (eventProgress.tasks && eventProgress.tasks[j]) || 0;
+                            var percent = Math.min(100, Math.floor((progress / task.targetCount) * 100));
+                            var completed = progress >= task.targetCount;
 
-                    // 特殊掉落
-                    if (ev.specialDrops && ev.specialDrops.length > 0) {
-                        h += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
-                        for (var j = 0; j < ev.specialDrops.length; j++) {
-                            var d = ev.specialDrops[j];
-                            h += (d.icon || '🎁') + d.name + '(' + d.chance + '%) ';
-                        }
-                        h += '</div>';
-                    }
-
-                    // 限定称号
-                    if (ev.limitedTitles && ev.limitedTitles.length > 0) {
-                        h += '<div style="font-size:10px;color:#fcd34d;margin:2px 0;">👑 限定称号：';
-                        for (var j = 0; j < ev.limitedTitles.length; j++) {
-                            var t = ev.limitedTitles[j];
-                            h += '<span style="color:' + t.color + ';">[' + t.name + ']</span> ';
+                            h += '<div style="background:' + (completed ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (completed ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:6px;margin-bottom:4px;">';
+                            h += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+                            h += '<span style="color:' + (completed ? '#a5d6a7' : '#ccc') + ';">' + esc(task.desc) + '</span>';
+                            h += '<span style="color:' + (completed ? '#4ade80' : '#888') + ';">' + progress + '/' + task.targetCount + '</span>';
+                            h += '</div>';
+                            h += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
+                            h += '<div style="height:100%;width:' + percent + '%;background:' + (completed ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
+                            h += '</div>';
+                            if (task.rewardTitle && completed) {
+                                h += '<div style="font-size:10px;color:' + task.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(task.rewardTitle.name) + ']</div>';
+                            }
+                            h += '</div>';
                         }
                         h += '</div>';
                     }
