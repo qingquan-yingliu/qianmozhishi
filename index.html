@@ -1372,8 +1372,8 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.8.3</h1>
-            <div class="subtitle">种地、采集、交友、交易</div>
+            <h1>🌾 阡陌之诗 v1.8.4</h1>
+            <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
             <div class="form-group"><label>密码</label><input type="password" id="loginPass" placeholder="至少4个字符"></div>
@@ -2650,9 +2650,20 @@
                     h += '<div class="wild-area-card">';
                     h += '<div class="wa-name">' + (a.icon || '🌿') + ' ' + esc(a.name) + '</div>';
                     h += '<div class="wa-desc">' + esc(a.desc || '') + '</div>';
+
+                    // 可获得的种子
                     if (a.seedNames && a.seedNames.length > 0) {
-                        h += '<div class="wa-seeds">可采集: ' + a.seedNames.join('、') + '</div>';
+                        h += '<div class="wa-seeds">🌱 种子: ' + a.seedNames.join('、') + '</div>';
                     }
+                    // 可获得的动物
+                    if (a.animalNames && a.animalNames.length > 0) {
+                        h += '<div style="font-size:11px;color:#fcd34d;margin-top:3px;">🐾 动物: ' + a.animalNames.join('、') + '</div>';
+                    }
+                    // 可获得的宠物
+                    if (a.petNames && a.petNames.length > 0) {
+                        h += '<div style="font-size:11px;color:#c4b5fd;margin-top:3px;">🐱 宠物: ' + a.petNames.join('、') + '</div>';
+                    }
+
                     h += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">';
                     h += '<button style="flex:1;min-width:80px;padding:8px;background:rgba(76,175,80,0.2);color:#a5d6a7;border:1px solid rgba(76,175,80,0.3);border-radius:8px;font-size:12px;cursor:pointer;" onclick="doGather(' + i + ')">🌿 采集(25体)</button>';
                     h += '<button style="flex:1;min-width:80px;padding:8px;background:rgba(251,191,36,0.2);color:#fcd34d;border:1px solid rgba(251,191,36,0.3);border-radius:8px;font-size:12px;cursor:pointer;" onclick="doCatch(' + i + ')">🐾 捕猎(30体)</button>';
@@ -3870,4 +3881,3 @@
 </body>
 
 </html>
-
