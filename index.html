@@ -1529,7 +1529,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.4</h1>
+            <h1>🌾 阡陌之诗 v1.9.5</h1>
             <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -1734,6 +1734,9 @@
                 <button id="rankTabPet"
                     style="flex:1;padding:8px;border:1px solid rgba(167,139,250,0.2);background:transparent;color:#888;border-radius:8px;font-size:12px;cursor:pointer;"
                     onclick="switchRankTab('pet')">🐱 宠物价值</button>
+                <button id="rankTabWeekly"
+                    style="flex:1;padding:8px;border:1px solid rgba(103,232,249,0.2);background:transparent;color:#888;border-radius:8px;font-size:12px;cursor:pointer;"
+                    onclick="switchRankTab('weekly')">📅 周挑战</button>
             </div>
             <div id="rankingContent"></div>
         </div>
@@ -2488,6 +2491,9 @@
                     } else {
                         addActionFail(msg.msg || '无法获取圈养区详情');
                     }
+                    break;
+                case 'weekly_ranking':
+                    if (ok) renderWeeklyRankingPanel(msg.ranking, msg.myRank);
                     break;
                 default:
                     if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
@@ -3783,28 +3789,31 @@
             updateRankTabStyle();
             if (tab === 'money') {
                 doAction('world_ranking');
-            } else {
+            } else if (tab === 'pet') {
                 doAction('pet_ranking');
+            } else if (tab === 'weekly') {
+                doAction('weekly_ranking');
             }
         }
 
         function updateRankTabStyle() {
             var moneyBtn = document.getElementById('rankTabMoney');
             var petBtn = document.getElementById('rankTabPet');
+            var weeklyBtn = document.getElementById('rankTabWeekly'); // 新增
+
+            // 重置所有样式为默认(未选中)
+            var defaultStyle = "flex:1;padding:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#888;border-radius:8px;font-size:12px;cursor:pointer;";
+            moneyBtn.style.cssText = defaultStyle;
+            petBtn.style.cssText = defaultStyle;
+            weeklyBtn.style.cssText = defaultStyle;
+
+            // 设置选中样式
             if (currentRankTab === 'money') {
-                moneyBtn.style.background = 'rgba(252,211,77,0.15)';
-                moneyBtn.style.color = '#fcd34d';
-                moneyBtn.style.borderColor = 'rgba(252,211,77,0.3)';
-                petBtn.style.background = 'transparent';
-                petBtn.style.color = '#888';
-                petBtn.style.borderColor = 'rgba(255,255,255,0.1)';
-            } else {
-                petBtn.style.background = 'rgba(167,139,250,0.15)';
-                petBtn.style.color = '#c4b5fd';
-                petBtn.style.borderColor = 'rgba(167,139,250,0.3)';
-                moneyBtn.style.background = 'transparent';
-                moneyBtn.style.color = '#888';
-                moneyBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+                moneyBtn.style.cssText = "flex:1;padding:8px;border:1px solid rgba(252,211,77,0.3);background:rgba(252,211,77,0.15);color:#fcd34d;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;";
+            } else if (currentRankTab === 'pet') {
+                petBtn.style.cssText = "flex:1;padding:8px;border:1px solid rgba(167,139,250,0.3);background:rgba(167,139,250,0.15);color:#c4b5fd;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;";
+            } else if (currentRankTab === 'weekly') {
+                weeklyBtn.style.cssText = "flex:1;padding:8px;border:1px solid rgba(103,232,249,0.3);background:rgba(103,232,249,0.15);color:#67e8f9;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;";
             }
         }
 
@@ -3908,6 +3917,61 @@
                 h += '<span>主人: <span style="color:' + (isMe ? '#a78bfa' : '#a5d6a7') + ';">' + esc(p.owner) + (isMe ? ' (你)' : '') + '</span></span>';
                 h += '</div>';
 
+                h += '</div>';
+            }
+
+            document.getElementById('rankingContent').innerHTML = h;
+        }
+
+         function renderWeeklyRankingPanel(ranking, myRank) {
+             var h = '<div style="text-align:right;margin-bottom:8px;">';
+            h += '<button style="padding:4px 12px;background:rgba(255,255,255,0.1);color:#ccc;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-size:11px;cursor:pointer;" onclick="doAction(\'weekly_ranking\')">🔄 刷新数据</button>';
+            h += '</div>';
+            if (!ranking || ranking.length === 0) {
+                document.getElementById('rankingContent').innerHTML = '<div style="color:#666;text-align:center;padding:20px;font-size:12px;">暂无本周挑战完成记录<br><span style="color:#555;margin-top:4px;">快去完成挑战抢占榜首吧！</span></div>';
+                return;
+            }
+
+            // 按时间排序 (服务器应该已经排过，但前端再保险一下)
+            ranking.sort(function(a, b) { return a.completedAt - b.completedAt; });
+
+            var h = '';
+
+            // 显示我的排名
+            if (myRank !== undefined && myRank !== null && ranking[myRank]) {
+                var myEntry = ranking[myRank];
+                var date = new Date(myEntry.completedAt);
+                var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+                
+                h += '<div style="background:rgba(103,232,249,0.1);border:1px solid rgba(103,232,249,0.2);border-radius:10px;padding:12px;margin-bottom:12px;text-align:center;">';
+                h += '<div style="font-size:12px;color:#888;">你的挑战成绩</div>';
+                h += '<div style="font-size:24px;color:#67e8f9;font-weight:600;margin:4px 0;">第 ' + (myRank + 1) + ' 名</div>';
+                h += '<div style="font-size:13px;color:#a5d6a7;">完成时间: ' + dateStr + '</div>';
+                h += '</div>';
+            }
+
+            h += '<div style="font-size:12px;color:#888;margin-bottom:8px;">最快完成记录</div>';
+            
+            for (var i = 0; i < ranking.length; i++) {
+                var p = ranking[i];
+                var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+                var isMe = p.username === username;
+                
+                var date = new Date(p.completedAt);
+                var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
+
+                h += '<div style="background:' + (isMe ? 'rgba(103,232,249,0.08)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (isMe ? 'rgba(103,232,249,0.2)' : 'rgba(255,255,255,0.06)') + ';border-radius:10px;padding:10px;margin-bottom:8px;">';
+
+                h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+                h += '<span style="font-size:13px;display:flex;align-items:center;gap:6px;">';
+                if (medal) h += '<span style="font-size:18px;">' + medal + '</span>';
+                else h += '<span style="font-size:13px;color:#666;min-width:20px;text-align:center;">#' + (i + 1) + '</span>';
+                
+                h += '<span style="color:' + (isMe ? '#67e8f9' : '#a5d6a7') + ';font-weight:600;">' + esc(p.username) + (isMe ? ' (你)' : '') + '</span>';
+                h += '</span>';
+                
+                h += '<span style="font-size:12px;color:#888;">⏱️ ' + dateStr + '</span>';
+                h += '</div>';
                 h += '</div>';
             }
 
@@ -4639,146 +4703,146 @@
         }
 
         function renderEventsPanel(events, playerProgress) {
-        var h = '';
-        var now = Date.now() + serverTimeOffset;
-        playerProgress = playerProgress || {};
+            var h = '';
+            var now = Date.now() + serverTimeOffset;
+            playerProgress = playerProgress || {};
 
-        if (!events || events.length === 0) {
-            h += '<div style="text-align:center;color:#555;padding:40px 20px;">';
-            h += '<div style="font-size:36px;margin-bottom:10px;">🎉</div>';
-            h += '<div style="font-size:14px;color:#888;">暂无活动</div>';
-            h += '<div style="font-size:12px;color:#555;margin-top:6px;">敬请期待天道开启新活动</div>';
-            h += '</div>';
-            document.getElementById('eventsContent').innerHTML = h;
-            return;
-        }
-
-        // 统一渲染函数，避免重复代码
-        function renderEventItem(ev, isHoliday) {
-            var status = getEventStatus(ev, now);
-            var statusClass = status === 'active' ? 'active-event' : status === 'upcoming' ? 'upcoming-event' : 'ended-event';
-            var statusLabel = status === 'active' ? '<span class="ec-status st-active">进行中</span>' :
-                status === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' :
-                    '<span class="ec-status st-ended">已结束</span>';
-
-            var html = '<div class="event-card ' + statusClass + '">';
-            html += '<div class="ec-header">';
-            html += '<span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>';
-            html += statusLabel;
-            html += '</div>';
-
-            if (ev.desc) {
-                html += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
+            if (!events || events.length === 0) {
+                h += '<div style="text-align:center;color:#555;padding:40px 20px;">';
+                h += '<div style="font-size:36px;margin-bottom:10px;">🎉</div>';
+                h += '<div style="font-size:14px;color:#888;">暂无活动</div>';
+                h += '<div style="font-size:12px;color:#555;margin-top:6px;">敬请期待天道开启新活动</div>';
+                h += '</div>';
+                document.getElementById('eventsContent').innerHTML = h;
+                return;
             }
 
-            // 活动效果显示
-            var effects = [];
-            if (ev.doubleHarvest) effects.push('🌾 双倍收获');
-            if (ev.doubleGather) effects.push('🌿 双倍采集');
-            if (ev.doubleMoney) effects.push('💰 双倍金币');
-            if (effects.length > 0) {
-                html += '<div style="font-size:11px;color:#a5d6a7;margin:4px 0;">✨ ' + effects.join(' · ') + '</div>';
-            }
+            // 统一渲染函数，避免重复代码
+            function renderEventItem(ev, isHoliday) {
+                var status = getEventStatus(ev, now);
+                var statusClass = status === 'active' ? 'active-event' : status === 'upcoming' ? 'upcoming-event' : 'ended-event';
+                var statusLabel = status === 'active' ? '<span class="ec-status st-active">进行中</span>' :
+                    status === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' :
+                        '<span class="ec-status st-ended">已结束</span>';
 
-            // 特殊掉落
-            if (ev.specialDrops && ev.specialDrops.length > 0) {
-                html += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
-                for (var j = 0; j < ev.specialDrops.length; j++) {
-                    var d = ev.specialDrops[j];
-                    var itemName = d.data ? d.data.name : d.name;
-                    html += (d.icon || '🎁') + itemName + '(' + d.chance + '%) ';
-                }
+                var html = '<div class="event-card ' + statusClass + '">';
+                html += '<div class="ec-header">';
+                html += '<span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>';
+                html += statusLabel;
                 html += '</div>';
-            }
 
-            // 限定称号
-            if (ev.limitedTitles && ev.limitedTitles.length > 0) {
-                html += '<div style="font-size:10px;color:#fcd34d;margin:2px 0;">👑 限定称号：';
-                for (var j = 0; j < ev.limitedTitles.length; j++) {
-                    var t = ev.limitedTitles[j];
-                    html += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> ';
+                if (ev.desc) {
+                    html += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
                 }
-                html += '</div>';
-            }
 
-            // 任务列表（带进度条）
-            if (ev.tasks && ev.tasks.length > 0) {
-                var eventProgress = playerProgress[ev.id] || {};
-                var progressTasks = eventProgress.tasks || [];
-                html += '<div style="margin-top:8px;">';
-                for (var j = 0; j < ev.tasks.length; j++) {
-                    var task = ev.tasks[j];
-                    var progress = (progressTasks[j] !== undefined && progressTasks[j] !== null) ? progressTasks[j] : 0;
-                    var percent = Math.min(100, Math.floor((progress / task.targetCount) * 100));
-                    var completed = progress >= task.targetCount;
+                // 活动效果显示
+                var effects = [];
+                if (ev.doubleHarvest) effects.push('🌾 双倍收获');
+                if (ev.doubleGather) effects.push('🌿 双倍采集');
+                if (ev.doubleMoney) effects.push('💰 双倍金币');
+                if (effects.length > 0) {
+                    html += '<div style="font-size:11px;color:#a5d6a7;margin:4px 0;">✨ ' + effects.join(' · ') + '</div>';
+                }
 
-                    html += '<div style="background:' + (completed ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (completed ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:6px;margin-bottom:4px;">';
-                    html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
-                    html += '<span style="color:' + (completed ? '#a5d6a7' : '#ccc') + ';">' + esc(task.desc) + '</span>';
-                    html += '<span style="color:' + (completed ? '#4ade80' : '#888') + ';">' + progress + '/' + task.targetCount + '</span>';
-                    html += '</div>';
-                    html += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
-                    html += '<div style="height:100%;width:' + percent + '%;background:' + (completed ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
-                    html += '</div>';
-                    if (task.rewardTitle && completed) {
-                        html += '<div style="font-size:10px;color:' + task.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(task.rewardTitle.name) + ']</div>';
+                // 特殊掉落
+                if (ev.specialDrops && ev.specialDrops.length > 0) {
+                    html += '<div style="font-size:10px;color:#c4b5fd;margin:4px 0;">🎁 特殊掉落：';
+                    for (var j = 0; j < ev.specialDrops.length; j++) {
+                        var d = ev.specialDrops[j];
+                        var itemName = d.data ? d.data.name : d.name;
+                        html += (d.icon || '🎁') + itemName + '(' + d.chance + '%) ';
                     }
                     html += '</div>';
                 }
+
+                // 限定称号
+                if (ev.limitedTitles && ev.limitedTitles.length > 0) {
+                    html += '<div style="font-size:10px;color:#fcd34d;margin:2px 0;">👑 限定称号：';
+                    for (var j = 0; j < ev.limitedTitles.length; j++) {
+                        var t = ev.limitedTitles[j];
+                        html += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> ';
+                    }
+                    html += '</div>';
+                }
+
+                // 任务列表（带进度条）
+                if (ev.tasks && ev.tasks.length > 0) {
+                    var eventProgress = playerProgress[ev.id] || {};
+                    var progressTasks = eventProgress.tasks || [];
+                    html += '<div style="margin-top:8px;">';
+                    for (var j = 0; j < ev.tasks.length; j++) {
+                        var task = ev.tasks[j];
+                        var progress = (progressTasks[j] !== undefined && progressTasks[j] !== null) ? progressTasks[j] : 0;
+                        var percent = Math.min(100, Math.floor((progress / task.targetCount) * 100));
+                        var completed = progress >= task.targetCount;
+
+                        html += '<div style="background:' + (completed ? 'rgba(76,175,80,0.1)' : 'rgba(255,255,255,0.03)') + ';border:1px solid ' + (completed ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.06)') + ';border-radius:6px;padding:6px;margin-bottom:4px;">';
+                        html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+                        html += '<span style="color:' + (completed ? '#a5d6a7' : '#ccc') + ';">' + esc(task.desc) + '</span>';
+                        html += '<span style="color:' + (completed ? '#4ade80' : '#888') + ';">' + progress + '/' + task.targetCount + '</span>';
+                        html += '</div>';
+                        html += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;">';
+                        html += '<div style="height:100%;width:' + percent + '%;background:' + (completed ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
+                        html += '</div>';
+                        if (task.rewardTitle && completed) {
+                            html += '<div style="font-size:10px;color:' + task.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(task.rewardTitle.name) + ']</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                // 时间与倒计时
+                var startStr = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                var endStr = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                if (startStr || endStr) {
+                    html += '<div class="ec-time">🕐 ' + startStr + (endStr ? ' ~ ' + endStr : '') + '</div>';
+                }
+
+                if (status === 'active' && ev.endTime) {
+                    var remain = ev.endTime - now;
+                    html += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(remain) + '</div>';
+                } else if (status === 'upcoming' && ev.startTime) {
+                    var until = ev.startTime - now;
+                    html += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(until) + ' 后开始</div>';
+                }
+
                 html += '</div>';
+                return html;
             }
 
-            // 时间与倒计时
-            var startStr = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-            var endStr = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-            if (startStr || endStr) {
-                html += '<div class="ec-time">🕐 ' + startStr + (endStr ? ' ~ ' + endStr : '') + '</div>';
+            // 分离节日活动和普通活动
+            var holidayEvents = events.filter(function (e) { return e.type === 'holiday' || e.holiday; });
+            var normalEvents = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
+
+            // 渲染节日活动
+            if (holidayEvents.length > 0) {
+                h += '<div style="margin-bottom:10px;">';
+                h += '<div style="font-size:12px;color:#fcd34d;margin-bottom:6px;">🎊 节日活动</div>';
+                for (var i = 0; i < holidayEvents.length; i++) {
+                    h += renderEventItem(holidayEvents[i], true);
+                }
+                h += '</div>';
             }
 
-            if (status === 'active' && ev.endTime) {
-                var remain = ev.endTime - now;
-                html += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(remain) + '</div>';
-            } else if (status === 'upcoming' && ev.startTime) {
-                var until = ev.startTime - now;
-                html += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(until) + ' 后开始</div>';
+            // 渲染普通活动
+            if (normalEvents.length > 0) {
+                h += '<div style="margin-top:' + (holidayEvents.length > 0 ? '16px' : '0') + ';">';
+                h += '<div style="font-size:12px;color:#a5d6a7;margin-bottom:6px;">📢 普通活动</div>';
+                // 排序：进行中 > 即将开始 > 已结束
+                var sorted = normalEvents.slice().sort(function (a, b) {
+                    var sa = getEventSortOrder(a, now);
+                    var sb = getEventSortOrder(b, now);
+                    return sa - sb;
+                });
+                for (var i = 0; i < sorted.length; i++) {
+                    h += renderEventItem(sorted[i], false);
+                }
+                h += '</div>';
             }
 
-            html += '</div>';
-            return html;
+            document.getElementById('eventsContent').innerHTML = h;
         }
-
-        // 分离节日活动和普通活动
-        var holidayEvents = events.filter(function (e) { return e.type === 'holiday' || e.holiday; });
-        var normalEvents = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
-
-        // 渲染节日活动
-        if (holidayEvents.length > 0) {
-            h += '<div style="margin-bottom:10px;">';
-            h += '<div style="font-size:12px;color:#fcd34d;margin-bottom:6px;">🎊 节日活动</div>';
-            for (var i = 0; i < holidayEvents.length; i++) {
-                h += renderEventItem(holidayEvents[i], true);
-            }
-            h += '</div>';
-        }
-
-        // 渲染普通活动
-        if (normalEvents.length > 0) {
-            h += '<div style="margin-top:' + (holidayEvents.length > 0 ? '16px' : '0') + ';">';
-            h += '<div style="font-size:12px;color:#a5d6a7;margin-bottom:6px;">📢 普通活动</div>';
-            // 排序：进行中 > 即将开始 > 已结束
-            var sorted = normalEvents.slice().sort(function (a, b) {
-                var sa = getEventSortOrder(a, now);
-                var sb = getEventSortOrder(b, now);
-                return sa - sb;
-            });
-            for (var i = 0; i < sorted.length; i++) {
-                h += renderEventItem(sorted[i], false);
-            }
-            h += '</div>';
-        }
-
-        document.getElementById('eventsContent').innerHTML = h;
-    }
 
         function getEventStatus(ev, now) {
             if (ev.startTime && now < ev.startTime) return 'upcoming';
