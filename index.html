@@ -1035,7 +1035,7 @@
             color: #6abf69;
         }
 
-        /* ===== 面板覆盖层 ===== */
+        /* ===== 面板覆盖层 (修复布局跳动问题) ===== */
         .panel-overlay {
             display: none;
             position: fixed;
@@ -1044,10 +1044,15 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.65);
-            z-index: 50;
+            z-index: 1000;
+            /* 提高层级，确保盖住其他内容 */
             justify-content: center;
             align-items: flex-end;
+            /* 底部对齐 */
             backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            overflow: hidden;
+            /* 防止自身滚动 */
         }
 
         .panel-overlay.show {
@@ -1058,13 +1063,22 @@
             width: 100%;
             max-width: 500px;
             max-height: 75vh;
-            background: linear-gradient(180deg, #1a2e1e, #152218);
+            /* 限制最大高度 */
+            background: #1a2e1e;
+            /* 提供纯色背景兜底，防止透明度叠加导致文字看不清 */
+            background: linear-gradient(180deg, #1a2e1e 0%, #152218 100%);
             border-radius: 20px 20px 0 0;
             padding: 16px;
             overflow-y: auto;
-            animation: slideUp 0.3s ease;
-            border-top: 1px solid rgba(106, 191, 105, 0.1);
-            box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
+            /* 允许内部滚动 */
+            overflow-x: hidden;
+            /* 禁止横向撑开 */
+            animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border-top: 1px solid rgba(106, 191, 105, 0.2);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+            /* 建立新的堆叠上下文 */
+            z-index: 1001;
         }
 
         .panel-title {
@@ -1234,6 +1248,7 @@
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.04), transparent);
             opacity: 0;
             transition: opacity 0.3s;
+            pointer-events: none; 
         }
 
         .wild-area-card:hover {
@@ -2805,77 +2820,133 @@
 
         function clickCage(cageId) {
             if (!playerData) return;
-            if (visitingOwner) { addSysMsg('正在操作 ' + visitingOwner + ' 的圈养区'); doAction('cage_detail', { farmId: visitingFarmId, cageId: cageId }); return; }
+            if (visitingOwner) {
+                addSysMsg('正在操作 ' + visitingOwner + ' 的圈养区');
+                doAction('cage_detail', { farmId: visitingFarmId, cageId: cageId });
+                return;
+            }
+
             var cage = playerData.cages[cageId], h = '';
+
             if (!cage.animal) {
+                // === 空圈状态 ===
                 h += '<div class="text-center mb-12 text-13" style="color:#7a9a7a;">第' + (cageId + 1) + '个圈 · 空圈</div>';
-                if (!playerData.animals || playerData.animals.length === 0) { h += '<div class="text-center p-12" style="color:#4a5a4a;">没有动物，去野外捕捉吧</div>'; }
-                else {
+                if (!playerData.animals || playerData.animals.length === 0) {
+                    h += '<div class="text-center p-12" style="color:#4a5a4a;">没有动物，去野外捕捉吧</div>';
+                } else {
                     h += '<div class="text-12 mb-8" style="color:#5a7a5a;">选择动物放入：</div>';
+                    h += '<div class="flex-col-6">'; // 容器包裹
                     for (var i = 0; i < playerData.animals.length; i++) {
                         var a = playerData.animals[i];
-                        h += '<div class="glass flex-between p-8 mb-6">';
-                        h += '<span class="text-13">' + (a.icon || '🐾') + ' ' + esc(a.name) + ' <span class="text-muted">x' + a.count + '</span></span>';
-                        h += '<div class="flex-gap-4"><input type="number" id="placeCount_' + i + '" value="1" min="1" max="' + a.count + '" class="input-dark input-sm">';
-                        h += '<button class="action-btn action-btn-solid-green" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + i + ')">放入</button></div></div>';
+                        h += '<div class="glass flex-between p-8">';
+                        h += '  <span class="text-13">' + (a.icon || '🐾') + ' ' + esc(a.name) + ' <span class="text-muted">x' + a.count + '</span></span>';
+                        h += '  <div class="flex-gap-4">';
+                        h += '    <input type="number" id="placeCount_' + i + '" value="1" min="1" max="' + a.count + '" class="input-dark input-sm">';
+                        h += '    <button class="action-btn action-btn-solid-green" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + i + ')">放入</button>';
+                        h += '  </div>';
+                        h += '</div>';
                     }
+                    h += '</div>';
                 }
             } else {
+                // === 已有动物状态 ===
                 var a = cage.animal, starving = a.food < 0, foodStatus = a.food >= 0 ? Math.floor(a.food) : 0;
                 var realH = calcRealTimeLeft(a), timeStr = formatHours(realH);
+
                 h += '<div class="text-center mb-12">';
                 h += '<div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
                 h += '<div style="font-size:16px;color:#fcd34d;">' + esc(a.name) + '</div>';
                 h += '<div class="text-muted" style="margin-top:4px;">第' + (cageId + 1) + '个圈</div>';
                 h += '<div style="font-size:14px;color:#67e8f9;margin-top:6px;">数量: ' + a.count + ' 只</div>';
-                if (starving) h += '<div style="font-size:13px;color:#ef4444;margin-top:6px;">⚠️ 食物不足！动物正在死亡</div>';
-                else h += '<div style="font-size:13px;color:#a5d6a7;margin-top:6px;">🍖 食物: ' + foodStatus + ' (预计还能撑 ' + timeStr + ')</div>';
+
+                if (starving) {
+                    h += '<div style="font-size:13px;color:#ef4444;margin-top:6px;">⚠️ 食物不足！动物正在死亡</div>';
+                } else {
+                    h += '<div style="font-size:13px;color:#a5d6a7;margin-top:6px;">🍖 食物: ' + foodStatus + ' (预计还能撑 ' + timeStr + ')</div>';
+                }
                 h += '<div class="text-muted" style="margin-top:4px;">消耗: ' + a.foodPerHour + '/小时 | 售价: 💰' + a.sellPrice + '/只</div></div>';
+
                 h += '<div class="flex-col-6">';
-                // 追加同种动物
+
+                // 1. 追加同种动物
                 var sa = (playerData.animals || []).filter(function (an) { return an.id === a.id; });
                 if (sa.length > 0) {
                     var s0 = sa[0], si = playerData.animals.indexOf(s0);
-                    h += '<div style="border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:8px;margin-bottom:4px;">';
-                    h += '<div class="text-12" style="color:#67e8f9;margin-bottom:4px;">➕ 追加同种动物（库存 ' + s0.count + ' 只）：</div>';
-                    h += '<div class="flex-gap-4"><input type="number" id="addMoreCount" value="1" min="1" max="' + s0.count + '" class="input-dark input-num">';
-                    h += '<button class="action-btn action-btn-cyan" style="flex:1;" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + si + ',true)">追加放入</button>';
-                    h += '<button class="action-btn action-btn-cyan" onclick="doPlaceAnimalAll(' + cageId + ',\'' + a.id + '\',' + s0.count + ')">全部放入</button></div></div>';
+                    h += '<div class="glass p-8" style="margin-bottom:4px;">';
+                    h += '  <div class="text-12" style="color:#67e8f9;margin-bottom:4px;">➕ 追加同种（库存 ' + s0.count + '）：</div>';
+                    h += '  <div class="flex-gap-4">';
+                    h += '    <input type="number" id="addMoreCount" value="1" min="1" max="' + s0.count + '" class="input-dark input-num">';
+                    h += '    <button class="action-btn action-btn-cyan" style="flex:1;" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + si + ',true)">追加</button>';
+                    h += '    <button class="action-btn action-btn-cyan" onclick="doPlaceAnimalAll(' + cageId + ',\'' + a.id + '\',' + s0.count + ')">全部</button>';
+                    h += '  </div>';
+                    h += '</div>';
                 }
-                // 喂食
-                h += '<div class="text-12 mb-6" style="color:#5a7a5a;">喂食（种子+1，果实+5）：</div>';
+
+                // 2. 喂食区域
+                h += '<div class="glass p-8">';
+                h += '<div class="text-12 mb-6" style="color:#5a7a5a;">喂食：</div>';
                 var hasFood = false;
+
+                // 饲料
                 var feeds = (playerData.items || []).filter(function (it) { return it.type === 'feed'; });
                 if (feeds.length > 0) {
                     hasFood = true;
-                    h += '<div class="mb-6"><select id="feedFeedSelect" class="input-dark w-full mb-6">';
-                    for (var fi = 0; fi < feeds.length; fi++) { var f = feeds[fi]; h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + ((f.effect && f.effect.foodValue) ? f.effect.foodValue : 20) + '食物) x' + f.count + '</option>'; }
-                    h += '</select><div class="flex-gap-4"><input type="number" id="feedFeedCount" value="1" min="1" class="input-dark input-num">';
-                    h += '<button class="action-btn action-btn-pink" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'feed\')">✨ 使用精制饲料</button></div></div>';
+                    h += '<div class="mb-6">';
+                    h += '<select id="feedFeedSelect" class="input-dark w-full mb-6">';
+                    for (var fi = 0; fi < feeds.length; fi++) {
+                        var f = feeds[fi];
+                        h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + ((f.effect && f.effect.foodValue) ? f.effect.foodValue : 20) + ') x' + f.count + '</option>';
+                    }
+                    h += '</select>';
+                    h += '<div class="flex-gap-4">';
+                    h += '  <input type="number" id="feedFeedCount" value="1" min="1" class="input-dark input-num">';
+                    h += '  <button class="action-btn action-btn-pink" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'feed\')">✨ 喂饲料</button>';
+                    h += '</div></div>';
                 }
+
+                // 种子
                 if (playerData.seeds && playerData.seeds.length > 0) {
                     hasFood = true;
+                    h += '<div class="mb-6">';
                     h += '<select id="feedSeedSelect" class="input-dark w-full mb-6">';
                     for (var si2 = 0; si2 < playerData.seeds.length; si2++) { var s = playerData.seeds[si2]; h += '<option value="' + s.id + '">🌱 ' + esc(s.name) + ' (x' + s.count + ')</option>'; }
-                    h += '</select><div class="flex-gap-4 mb-8"><input type="number" id="feedSeedCount" value="1" min="1" class="input-dark input-num">';
-                    h += '<button class="action-btn action-btn-green" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'seed\')">用种子喂食</button></div>';
+                    h += '</select>';
+                    h += '<div class="flex-gap-4">';
+                    h += '  <input type="number" id="feedSeedCount" value="1" min="1" class="input-dark input-num">';
+                    h += '  <button class="action-btn action-btn-green" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'seed\')">喂种子(+1)</button>';
+                    h += '</div></div>';
                 }
+
+                // 果实
                 if (playerData.fruits && playerData.fruits.length > 0) {
                     hasFood = true;
+                    h += '<div class="mb-6">';
                     h += '<select id="feedFruitSelect" class="input-dark w-full mb-6">';
                     for (var fi2 = 0; fi2 < playerData.fruits.length; fi2++) { var f2 = playerData.fruits[fi2]; h += '<option value="' + f2.id + '">🍎 ' + esc(f2.name) + ' (x' + f2.count + ')</option>'; }
-                    h += '</select><div class="flex-gap-4 mb-8"><input type="number" id="feedFruitCount" value="1" min="1" class="input-dark input-num">';
-                    h += '<button class="action-btn action-btn-gold" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'fruit\')">用果实喂食</button></div>';
+                    h += '</select>';
+                    h += '<div class="flex-gap-4">';
+                    h += '  <input type="number" id="feedFruitCount" value="1" min="1" class="input-dark input-num">';
+                    h += '  <button class="action-btn action-btn-gold" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'fruit\')">喂果实(+5)</button>';
+                    h += '</div></div>';
                 }
-                if (!hasFood) h += '<div class="text-11 text-center p-10" style="color:#3a4a3a;">没有食物，去种田或采集吧</div>';
-                // 出售
-                h += '<div style="border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;margin-top:4px;">';
+
+                if (!hasFood) h += '<div class="text-11 text-center p-10" style="color:#3a4a3a;">没有食物</div>';
+                h += '</div>'; // end glass
+
+                // 3. 出售区域
+                h += '<div class="glass p-8" style="border-color:rgba(239,68,68,0.2);">';
                 h += '<div class="text-12 mb-6" style="color:#5a7a5a;">出售动物：</div>';
-                h += '<div class="flex-gap-4"><input type="number" id="sellAnimalCount" value="1" min="1" max="' + a.count + '" class="input-dark input-num">';
-                h += '<button class="action-btn action-btn-gold" style="flex:1;" onclick="doSellAnimal(' + cageId + ',false)">卖出</button>';
-                h += '<button class="action-btn action-btn-red" onclick="doSellAnimal(' + cageId + ',true)">全卖</button></div></div></div>';
+                h += '<div class="flex-gap-4">';
+                h += '  <input type="number" id="sellAnimalCount" value="1" min="1" max="' + a.count + '" class="input-dark input-num">';
+                h += '  <button class="action-btn action-btn-gold" style="flex:1;" onclick="doSellAnimal(' + cageId + ',false)">卖出</button>';
+                h += '  <button class="action-btn action-btn-red" onclick="doSellAnimal(' + cageId + ',true)">全卖</button>';
+                h += '</div></div>';
+
+                h += '</div>'; // end flex-col-6
             }
-            document.getElementById('cageActionContent').innerHTML = h; openPanel('panelCageAction');
+
+            document.getElementById('cageActionContent').innerHTML = h;
+            openPanel('panelCageAction');
         }
 
         function doFeedFriendAnimal(farmId, cageId, feedType) {
@@ -2905,52 +2976,105 @@
         function doVisitWater(plotId) { doAction('water', { plotId: plotId }); }
 
         function clickPlot(plotId) {
-            if (!playerData) return; var pl = playerData.plots[plotId], h = '';
+            if (!playerData) return;
+            var pl = playerData.plots[plotId], h = '';
+
             if (!pl.plant) {
+                // === 空地状态：显示选种列表 ===
                 h += '<div class="text-center mb-12 text-13" style="color:#7a9a7a;">第' + (plotId + 1) + '块地 · 空地</div>';
-                if (!playerData.seeds || playerData.seeds.length === 0) { h += '<div class="text-center p-12" style="color:#4a5a4a;">没有种子，去野外采集或商店购买吧</div>'; }
-                else {
+
+                if (!playerData.seeds || playerData.seeds.length === 0) {
+                    h += '<div class="text-center p-12" style="color:#4a5a4a;">没有种子，去野外采集或商店购买吧</div>';
+                } else {
                     h += '<div class="text-12 mb-8" style="color:#5a7a5a;">选择种子种植：</div>';
+                    h += '<div class="flex-col-6">'; // 包裹一层容器
+
                     for (var i = 0; i < playerData.seeds.length; i++) {
-                        var s = playerData.seeds[i], gm = Math.round(s.growTime / 60000), gt = gm >= 60 ? Math.round(gm / 60 * 10) / 10 + '小时' : gm + '分钟';
-                        h += '<div class="glass flex-between p-8 mb-6" style="cursor:pointer;" onclick="doPlant(' + plotId + ',\'' + s.id + '\')">';
-                        h += '<span class="text-13">' + (s.icon || '🌱') + ' ' + esc(s.name) + ' <span class="text-muted">x' + s.count + '</span></span>';
-                        h += '<span class="text-11" style="color:#5a7a5a;">生长: ' + gt + ' → ' + (s.fruitIcon || '🍎') + esc(s.fruitName) + '</span></div>';
+                        var s = playerData.seeds[i];
+                        if (!s) continue; // 容错
+
+                        var gm = Math.round(s.growTime / 60000);
+                        var gt = gm >= 60 ? (Math.round(gm / 60 * 10) / 10 + '小时') : (gm + '分钟');
+
+                        // 确保ID被转义，防止单引号破坏HTML
+                        var safeSeedId = s.id.replace(/'/g, "\\'");
+
+                        h += '<div class="glass flex-between p-8" style="cursor:pointer;margin-bottom:6px;" onclick="doPlant(' + plotId + ',\'' + safeSeedId + '\')">';
+                        h += '  <div>';
+                        h += '    <div class="text-13">' + (s.icon || '🌱') + ' ' + esc(s.name) + ' <span class="text-muted">x' + s.count + '</span></div>';
+                        h += '    <div class="text-11" style="color:#5a7a5a;margin-top:2px;">生长: ' + gt + ' → ' + (s.fruitIcon || '🍎') + esc(s.fruitName) + '</div>';
+                        h += '  </div>';
+                        h += '  <div class="btn-td btn-green" style="padding:4px 12px;">种植</div>';
+                        h += '</div>';
                     }
+                    h += '</div>'; // 关闭 flex-col-6
                 }
             } else {
-                var progress = Math.max(0, Math.min(1, pl.plant.progress || 0)), mature = pl.plant.mature || progress >= 1, pct = Math.floor(progress * 100);
-                var gt2 = pl.plant.effectiveGrowTime || pl.plant.growTime || 7200000, now = Date.now() + serverTimeOffset;
-                var remainMs = Math.max(0, gt2 - (now - pl.plant.plantedAt)), remainMin = Math.ceil(remainMs / 60000);
-                var remainText = remainMin >= 60 ? Math.floor(remainMin / 60) + '时' + (remainMin % 60) + '分' : remainMin + '分钟';
+                // === 已种植状态 ===
+                var progress = Math.max(0, Math.min(1, pl.plant.progress || 0));
+                var mature = pl.plant.mature || progress >= 1;
+                var pct = Math.floor(progress * 100);
+
+                var gt2 = pl.plant.effectiveGrowTime || pl.plant.growTime || 7200000;
+                var now = Date.now() + serverTimeOffset;
+                var remainMs = Math.max(0, gt2 - (now - pl.plant.plantedAt));
+                var remainMin = Math.ceil(remainMs / 60000);
+                var remainText = remainMin >= 60 ? (Math.floor(remainMin / 60) + '时' + (remainMin % 60) + '分') : (remainMin + '分钟');
+
                 h += '<div class="text-center mb-12">';
                 h += '<div style="font-size:36px;margin-bottom:6px;">' + (mature ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</div>';
                 h += '<div style="font-size:16px;color:#a5d6a7;">' + esc(pl.plant.name) + '</div>';
                 h += '<div class="text-muted" style="margin-top:4px;">第' + (plotId + 1) + '块地</div>';
-                if (mature) h += '<div style="font-size:14px;color:#fcd34d;margin-top:6px;">🎉 已成熟！</div>';
-                else {
+
+                if (mature) {
+                    h += '<div style="font-size:14px;color:#fcd34d;margin-top:6px;">🎉 已成熟！</div>';
+                } else {
                     h += '<div style="font-size:13px;color:#7a9a7a;margin-top:6px;">成长进度: ' + pct + '%</div>';
-                    h += '<div style="width:80%;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin:6px auto;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#2e7d32,#4caf50);border-radius:3px;"></div></div>';
+                    h += '<div style="width:80%;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin:6px auto;overflow:hidden;">';
+                    h += '  <div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#2e7d32,#4caf50);border-radius:3px;"></div>';
+                    h += '</div>';
                     h += '<div class="text-11" style="color:#5a7a5a;">预计还需: ' + remainText + '</div>';
                 }
+
+                // 标签展示
                 var tags = [];
                 if (pl.plant.selfWatered || pl.plant.watered) tags.push('💧 已浇水');
                 if (pl.plant.fertilizerReduce > 0) tags.push('🧪 已施肥');
                 var fw = pl.plant.friendWaters || [];
-                if (fw.length > 0) { var tr = 0; fw.forEach(function (f) { tr += f.reduce || 0; }); tags.push('👥 ' + fw.length + '人浇水（-' + Math.round(tr / 60000) + '分）'); }
-                if (tags.length > 0) h += '<div class="text-11" style="color:#4a5a4a;margin-top:4px;">' + tags.join(' · ') + '</div>';
-                h += '</div><div class="flex-col-6">';
-                if (mature) { h += '<button class="action-btn action-btn-solid-green w-full" style="padding:12px;font-size:14px;" onclick="doHarvest(' + plotId + ')">🌾 收获</button>'; }
-                else {
-                    if (!pl.plant.selfWatered) h += '<button class="action-btn action-btn-blue w-full" style="padding:10px;" onclick="doWater(' + plotId + ')">💧 浇水（免费，减少生长时间）</button>';
-                    var ferts = (playerData.items || []).filter(function (it) { return it.type === 'fertilizer'; });
-                    if (ferts.length > 0) { for (var fi = 0; fi < ferts.length; fi++) { var f = ferts[fi]; h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doFertilize(' + plotId + ',\'' + f.id + '\')">🧪 ' + esc(f.name) + ' (x' + f.count + ')</button>'; } }
-                    else h += '<div class="text-11 text-center" style="color:#3a4a3a;padding:6px;">没有肥料，可以去商店购买</div>';
+                if (fw.length > 0) {
+                    var tr = 0;
+                    fw.forEach(function (f) { tr += f.reduce || 0; });
+                    tags.push('👥 ' + fw.length + '人浇水（-' + Math.round(tr / 60000) + '分）');
                 }
+                if (tags.length > 0) {
+                    h += '<div class="text-11" style="color:#4a5a4a;margin-top:4px;">' + tags.join(' · ') + '</div>';
+                }
+
+                h += '</div><div class="flex-col-6">';
+
+                if (mature) {
+                    h += '<button class="action-btn action-btn-solid-green w-full" style="padding:12px;font-size:14px;" onclick="doHarvest(' + plotId + ')">🌾 收获</button>';
+                } else {
+                    if (!pl.plant.selfWatered) {
+                        h += '<button class="action-btn action-btn-blue w-full" style="padding:10px;" onclick="doWater(' + plotId + ')">💧 浇水（免费，减少生长时间）</button>';
+                    }
+                    var ferts = (playerData.items || []).filter(function (it) { return it.type === 'fertilizer'; });
+                    if (ferts.length > 0) {
+                        for (var fi = 0; fi < ferts.length; fi++) {
+                            var f = ferts[fi];
+                            h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doFertilize(' + plotId + ',\'' + f.id + '\')">🧪 ' + esc(f.name) + ' (x' + f.count + ')</button>';
+                        }
+                    } else {
+                        h += '<div class="text-11 text-center" style="color:#3a4a3a;padding:6px;">没有肥料，可以去商店购买</div>';
+                    }
+                }
+
                 h += '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.04);padding-top:8px;">';
                 h += '<button class="action-btn action-btn-red w-full" onclick="doRemovePlant(' + plotId + ')">🗑️ 铲除作物 (无法找回)</button></div></div>';
             }
-            document.getElementById('plotActionContent').innerHTML = h; openPanel('panelPlotAction');
+
+            document.getElementById('plotActionContent').innerHTML = h;
+            openPanel('panelPlotAction');
         }
 
         function doPlant(p, s) { doAction('plant', { plotId: p, seedId: s }); }
@@ -2991,24 +3115,43 @@
         function openWeeklyChallenge() { doAction('weekly_challenge_info'); openPanel('panelWeeklyChallenge'); }
         function renderWeeklyChallengePanel(ch, prog) {
             var h = '';
-            if (!ch) { h += '<div class="text-center p-12" style="color:#4a5a4a;"><div style="font-size:36px;margin-bottom:10px;">📅</div><div class="text-13">暂无周挑战</div><div class="text-muted" style="margin-top:4px;">等待天道开启新挑战</div></div>'; document.getElementById('weeklyChallengeContent').innerHTML = h; return; }
+            if (!ch) {
+                h += '<div class="text-center p-12" style="color:#4a5a4a;"><div style="font-size:36px;margin-bottom:10px;">📅</div><div class="text-13">暂无周挑战</div><div class="text-muted" style="margin-top:4px;">等待天道开启新挑战</div></div>';
+                document.getElementById('weeklyChallengeContent').innerHTML = h;
+                return;
+            }
+
             var now = Date.now(), st = new Date(ch.startTime), et = new Date(ch.endTime), tr = et - now, dr = Math.floor(tr / 86400000), hr = Math.floor((tr % 86400000) / 3600000);
+
             h += '<div class="text-center mb-12"><div style="font-size:16px;color:#fcd34d;font-weight:600;">' + esc(ch.name) + '</div>';
             if (ch.desc) h += '<div class="text-12" style="color:#5a7a5a;margin-top:4px;">' + esc(ch.desc) + '</div>';
             h += '<div class="text-11" style="color:#4a5a4a;margin-top:6px;">' + st.toLocaleDateString() + ' ~ ' + et.toLocaleDateString() + '</div>';
             h += '<div class="text-12" style="color:#67e8f9;margin-top:4px;">⏳ 剩余 ' + dr + '天' + hr + '小时</div></div>';
+
+            // 任务列表
             h += '<div style="margin:12px 0;"><div class="text-13 text-green mb-6">📋 挑战任务</div>';
             var tasks = ch.tasks || [], allDone = true;
+
             for (var i = 0; i < tasks.length; i++) {
                 var t = tasks[i], tp = prog && prog.tasks ? (prog.tasks[i] || 0) : 0, done = tp >= t.targetCount, pct = Math.min(100, Math.floor((tp / t.targetCount) * 100));
                 if (!done) allDone = false;
+
                 h += '<div class="glass p-10 mb-6" style="border-color:' + (done ? 'rgba(76,175,80,0.25)' : 'rgba(255,255,255,0.06)') + ';background:' + (done ? 'rgba(76,175,80,0.06)' : 'transparent') + ';">';
-                h += '<div class="flex-between mb-6"><span style="color:' + (done ? '#a5d6a7' : '#aaa') + ';">' + getTaskTypeName(t.type) + ' x' + t.targetCount + '</span><span style="color:' + (done ? '#4ade80' : '#5a7a5a') + ';">' + tp + '/' + t.targetCount + '</span></div>';
-                h += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (done ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div></div></div>';
+                h += '  <div class="flex-between mb-6">';
+                h += '    <span style="color:' + (done ? '#a5d6a7' : '#aaa') + ';">' + getTaskTypeName(t.type) + ' x' + t.targetCount + '</span>';
+                h += '    <span style="color:' + (done ? '#4ade80' : '#5a7a5a') + ';">' + tp + '/' + t.targetCount + '</span>';
+                h += '  </div>';
+                h += '  <div style="width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">';
+                h += '    <div style="height:100%;width:' + pct + '%;background:' + (done ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
+                h += '  </div>';
+                h += '</div>';
             }
             h += '</div>';
+
+            // 奖励列表
             if (ch.rewards && ch.rewards.length > 0) {
-                h += '<div class="glass p-10 mb-12" style="border-color:rgba(251,191,36,0.12);"><div class="text-12 text-gold mb-6">🎁 挑战奖励</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
+                h += '<div class="glass p-10 mb-12" style="border-color:rgba(251,191,36,0.12);">';
+                h += '<div class="text-12 text-gold mb-6">🎁 挑战奖励</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
                 for (var i = 0; i < ch.rewards.length; i++) {
                     var r = ch.rewards[i];
                     if (r.type === 'money') h += '<span class="glass p-8 text-11 text-gold" style="padding:4px 8px;">💰 ' + r.amount + '金币</span>';
@@ -3018,13 +3161,21 @@
                 }
                 h += '</div></div>';
             }
+
+            // 底部按钮状态
             if (prog && prog.completed) {
-                if (prog.claimed) h += '<div class="glass text-center p-12 text-13" style="color:#5a7a5a;">✅ 奖励已领取</div>';
-                else h += '<button class="btn btn-green" onclick="claimWeeklyReward()">🎁 领取奖励</button>';
+                if (prog.claimed) {
+                    h += '<div class="glass text-center p-12 text-13" style="color:#5a7a5a;">✅ 奖励已领取</div>';
+                } else {
+                    h += '<button class="btn btn-green" onclick="claimWeeklyReward()">🎁 领取奖励</button>';
+                }
             } else if (allDone) {
-                h += '<div class="text-center text-12" style="color:#4ade80;padding:8px;">✨ 任务已完成！</div>';
-                h += '<button class="btn btn-green" style="margin-top:4px;" onclick="refreshWeeklyChallenge()">🔄 刷新</button>';
-            } else h += '<div class="text-center text-12" style="color:#5a7a5a;padding:8px;">完成所有任务领取丰厚奖励</div>';
+                h += '<div class="text-center text-12" style="color:#4ade80;padding:8px;">✨ 任务已完成！等待结算...</div>';
+                h += '<button class="btn btn-green" style="margin-top:4px;" onclick="refreshWeeklyChallenge()">🔄 刷新状态</button>';
+            } else {
+                h += '<div class="text-center text-12" style="color:#5a7a5a;padding:8px;">完成所有任务领取丰厚奖励</div>';
+            }
+
             document.getElementById('weeklyChallengeContent').innerHTML = h;
         }
         function claimWeeklyReward() { doAction('claim_weekly_reward'); }
@@ -3618,44 +3769,106 @@
         // 活动
         function openEvents() { if (playerData && playerData._worldId) doAction('event_list'); else renderEventsPanel([]); openPanel('panelEvents'); }
         function renderEventsPanel(events, playerProgress) {
-            var h = '', now = Date.now() + serverTimeOffset; playerProgress = playerProgress || {};
-            if (!events || events.length === 0) { h += '<div class="text-center p-12" style="color:#3a4a3a;"><div style="font-size:36px;margin-bottom:10px;">🎉</div><div style="font-size:14px;color:#5a7a5a;">暂无活动</div><div class="text-12" style="color:#3a4a3a;margin-top:6px;">敬请期待天道开启新活动</div></div>'; document.getElementById('eventsContent').innerHTML = h; return; }
+            var h = '', now = Date.now() + serverTimeOffset;
+            playerProgress = playerProgress || {};
+
+            if (!events || events.length === 0) {
+                h += '<div class="text-center p-12" style="color:#3a4a3a;"><div style="font-size:36px;margin-bottom:10px;">🎉</div><div style="font-size:14px;color:#5a7a5a;">暂无活动</div><div class="text-12" style="color:#3a4a3a;margin-top:6px;">敬请期待天道开启新活动</div></div>';
+                document.getElementById('eventsContent').innerHTML = h;
+                return;
+            }
+
             function renderEI(ev) {
-                var st = getEventStatus(ev, now), sc = st === 'active' ? 'active-event' : st === 'upcoming' ? 'upcoming-event' : 'ended-event';
+                var st = getEventStatus(ev, now);
+                var sc = st === 'active' ? 'active-event' : st === 'upcoming' ? 'upcoming-event' : 'ended-event';
                 var sl = st === 'active' ? '<span class="ec-status st-active">进行中</span>' : st === 'upcoming' ? '<span class="ec-status st-upcoming">即将开始</span>' : '<span class="ec-status st-ended">已结束</span>';
-                var html = '<div class="event-card ' + sc + '"><div class="ec-header"><span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>' + sl + '</div>';
+
+                var html = '<div class="event-card ' + sc + '">';
+                html += '<div class="ec-header"><span class="ec-name">' + (ev.icon || '🎉') + ' ' + esc(ev.name) + '</span>' + sl + '</div>';
+
                 if (ev.desc) html += '<div class="ec-desc">' + esc(ev.desc) + '</div>';
-                var eff = []; if (ev.doubleHarvest) eff.push('🌾 双倍收获'); if (ev.doubleGather) eff.push('🌿 双倍采集'); if (ev.doubleMoney) eff.push('💰 双倍金币');
+
+                // Buff效果
+                var eff = [];
+                if (ev.doubleHarvest) eff.push('🌾 双倍收获');
+                if (ev.doubleGather) eff.push('🌿 双倍采集');
+                if (ev.doubleMoney) eff.push('💰 双倍金币');
                 if (eff.length > 0) html += '<div class="text-11 text-green" style="margin:4px 0;">✨ ' + eff.join(' · ') + '</div>';
-                if (ev.specialDrops && ev.specialDrops.length > 0) { html += '<div class="text-muted" style="margin:4px 0;">🎁 特殊掉落：'; for (var j = 0; j < ev.specialDrops.length; j++) { var d = ev.specialDrops[j]; html += (d.icon || '🎁') + (d.data ? d.data.name : d.name) + '(' + d.chance + '%) '; } html += '</div>'; }
-                if (ev.limitedTitles && ev.limitedTitles.length > 0) { html += '<div class="text-muted" style="margin:2px 0;">👑 限定称号：'; for (var j = 0; j < ev.limitedTitles.length; j++) { var t = ev.limitedTitles[j]; html += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> '; } html += '</div>'; }
+
+                // 特殊掉落
+                if (ev.specialDrops && ev.specialDrops.length > 0) {
+                    html += '<div class="text-muted" style="margin:4px 0;">🎁 特殊掉落：';
+                    for (var j = 0; j < ev.specialDrops.length; j++) {
+                        var d = ev.specialDrops[j];
+                        html += (d.icon || '🎁') + (d.data ? d.data.name : d.name) + '(' + d.chance + '%) ';
+                    }
+                    html += '</div>';
+                }
+
+                // 限定称号
+                if (ev.limitedTitles && ev.limitedTitles.length > 0) {
+                    html += '<div class="text-muted" style="margin:2px 0;">👑 限定称号：';
+                    for (var j = 0; j < ev.limitedTitles.length; j++) {
+                        var t = ev.limitedTitles[j];
+                        html += '<span style="color:' + (t.color || '#fcd34d') + ';">[' + t.name + ']</span> ';
+                    }
+                    html += '</div>';
+                }
+
+                // 任务列表
                 if (ev.tasks && ev.tasks.length > 0) {
                     var ep = playerProgress[ev.id] || {}, pt = ep.tasks || [];
                     html += '<div style="margin-top:8px;">';
                     for (var j = 0; j < ev.tasks.length; j++) {
                         var tk = ev.tasks[j], pg = (pt[j] !== undefined && pt[j] !== null) ? pt[j] : 0, pct = Math.min(100, Math.floor((pg / tk.targetCount) * 100)), done = pg >= tk.targetCount;
+
                         html += '<div class="glass" style="padding:6px;margin-bottom:4px;border-color:' + (done ? 'rgba(76,175,80,0.25)' : 'rgba(255,255,255,0.04)') + ';background:' + (done ? 'rgba(76,175,80,0.04)' : 'transparent') + ';">';
-                        html += '<div class="flex-between text-11" style="margin-bottom:2px;"><span style="color:' + (done ? '#a5d6a7' : '#aaa') + ';">' + esc(tk.desc) + '</span><span style="color:' + (done ? '#4ade80' : '#5a7a5a') + ';">' + pg + '/' + tk.targetCount + '</span></div>';
-                        html += '<div style="width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (done ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div></div>';
-                        if (tk.rewardTitle && done) html += '<div style="font-size:10px;color:' + tk.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(tk.rewardTitle.name) + ']</div>';
+                        html += '  <div class="flex-between text-11" style="margin-bottom:2px;">';
+                        html += '    <span style="color:' + (done ? '#a5d6a7' : '#aaa') + ';">' + esc(tk.desc) + '</span>';
+                        html += '    <span style="color:' + (done ? '#4ade80' : '#5a7a5a') + ';">' + pg + '/' + tk.targetCount + '</span>';
+                        html += '  </div>';
+                        html += '  <div style="width:100%;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">';
+                        html += '    <div style="height:100%;width:' + pct + '%;background:' + (done ? '#4caf50' : '#fbbf24') + ';border-radius:2px;"></div>';
+                        html += '  </div>';
+                        if (tk.rewardTitle && done) {
+                            html += '<div style="font-size:10px;color:' + tk.rewardTitle.color + ';margin-top:2px;">🎁 可领取称号：[' + esc(tk.rewardTitle.name) + ']</div>';
+                        }
                         html += '</div>';
                     }
                     html += '</div>';
                 }
+
+                // 时间显示
                 var ss = ev.startTime ? new Date(ev.startTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
                 var es = ev.endTime ? new Date(ev.endTime).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
                 if (ss || es) html += '<div class="ec-time">🕐 ' + ss + (es ? ' ~ ' + es : '') + '</div>';
-                if (st === 'active' && ev.endTime) html += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(ev.endTime - now) + '</div>';
-                else if (st === 'upcoming' && ev.startTime) html += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(ev.startTime - now) + ' 后开始</div>';
-                html += '</div>'; return html;
+
+                if (st === 'active' && ev.endTime) {
+                    html += '<div class="ec-countdown">⏳ 剩余 ' + formatCountdown(ev.endTime - now) + '</div>';
+                } else if (st === 'upcoming' && ev.startTime) {
+                    html += '<div class="ec-countdown" style="color:#67e8f9;">⏳ ' + formatCountdown(ev.startTime - now) + ' 后开始</div>';
+                }
+
+                html += '</div>'; // close event-card
+                return html;
             }
-            var hol = events.filter(function (e) { return e.type === 'holiday' || e.holiday; }), nor = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
-            if (hol.length > 0) { h += '<div class="mb-12"><div class="text-12 text-gold mb-6">🎊 节日活动</div>'; for (var i = 0; i < hol.length; i++)h += renderEI(hol[i]); h += '</div>'; }
+
+            var hol = events.filter(function (e) { return e.type === 'holiday' || e.holiday; });
+            var nor = events.filter(function (e) { return e.type !== 'holiday' && !e.holiday; });
+
+            if (hol.length > 0) {
+                h += '<div class="mb-12"><div class="text-12 text-gold mb-6">🎊 节日活动</div>';
+                for (var i = 0; i < hol.length; i++) h += renderEI(hol[i]);
+                h += '</div>';
+            }
             if (nor.length > 0) {
                 h += '<div style="margin-top:' + (hol.length > 0 ? '16px' : '0') + ';"><div class="text-12 text-green mb-6">📢 普通活动</div>';
                 var sorted = nor.slice().sort(function (a, b) { return getEventSortOrder(a, now) - getEventSortOrder(b, now); });
-                for (var i = 0; i < sorted.length; i++)h += renderEI(sorted[i]); h += '</div>';
+                for (var i = 0; i < sorted.length; i++) h += renderEI(sorted[i]);
+                h += '</div>';
             }
+
             document.getElementById('eventsContent').innerHTML = h;
         }
         function getEventStatus(ev, now) { if (ev.startTime && now < ev.startTime) return 'upcoming'; if (ev.endTime && now > ev.endTime) return 'ended'; return 'active'; }
@@ -3696,38 +3909,103 @@
         // 每日任务
         function openDailyTasks() { doAction('daily_tasks'); openPanel('panelDailyTasks'); }
         function renderDailyTasksPanel(dt, pb) {
-            if (!dt || !dt.tasks) { document.getElementById('dailyTasksContent').innerHTML = '<div class="text-center p-12" style="color:#4a5a4a;">暂无任务</div>'; return; }
-            var tasks = dt.tasks, cc = tasks.filter(function (t) { return t.completed; }).length, tc = tasks.length, allC = cc === tc && tc > 0, allCl = tasks.every(function (t) { return t.claimed; }) && allC;
-            var now = new Date(), tmr = new Date(now); tmr.setDate(tmr.getDate() + 1); tmr.setHours(0, 0, 0, 0);
-            var df = tmr - now, dh = Math.floor(df / 3600000), dm = Math.floor((df % 3600000) / 60000), ds = Math.floor((df % 60000) / 1000);
+            if (!dt || !dt.tasks) {
+                document.getElementById('dailyTasksContent').innerHTML = '<div class="text-center p-12" style="color:#4a5a4a;">暂无任务</div>';
+                return;
+            }
+
+            var tasks = dt.tasks;
+            var cc = tasks.filter(function (t) { return t.completed; }).length;
+            var tc = tasks.length;
+            var allC = cc === tc && tc > 0;
+            var allCl = tasks.every(function (t) { return t.claimed; }) && allC;
+
+            // 计算倒计时
+            var now = new Date();
+            var tmr = new Date(now);
+            tmr.setDate(tmr.getDate() + 1);
+            tmr.setHours(0, 0, 0, 0);
+            var df = tmr - now;
+            var dh = Math.floor(df / 3600000);
+            var dm = Math.floor((df % 3600000) / 60000);
+            var ds = Math.floor((df % 60000) / 1000);
             var cd = dh + ':' + String(dm).padStart(2, '0') + ':' + String(ds).padStart(2, '0');
+
+            // 头部统计
             var h = '<div class="text-center mb-12"><div class="text-12" style="color:#5a7a5a;">刷新倒计时 <span class="text-gold fw-600">' + cd + '</span></div>';
             h += '<div class="text-13 text-green" style="margin-top:4px;">完成 ' + cc + '/' + tc + ' 个任务</div></div>';
+
+            // 任务列表循环
             for (var i = 0; i < tasks.length; i++) {
-                var t = tasks[i], pp = Math.min(100, Math.floor((t.progress / t.targetCount) * 100));
+                var t = tasks[i];
+                var pp = Math.min(100, Math.floor((t.progress / t.targetCount) * 100));
+
                 var bg = t.claimed ? 'rgba(255,255,255,0.01)' : (t.completed ? 'rgba(76,175,80,0.06)' : 'rgba(255,255,255,0.02)');
                 var bc = t.claimed ? 'rgba(255,255,255,0.04)' : (t.completed ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.06)');
+
+                // --- 任务卡片容器 ---
                 h += '<div class="glass p-12 mb-8" style="background:' + bg + ';border-color:' + bc + ';border-radius:14px;">';
-                h += '<div class="flex-between mb-6"><span class="text-13" style="color:' + (t.completed ? '#a5d6a7' : '#aaa') + ';">' + esc(t.targetDesc) + '</span>';
-                if (t.claimed) h += '<span class="text-11 glass" style="padding:2px 8px;color:#5a7a5a;">✅ 已领取</span>';
-                else if (t.completed) h += '<button class="btn-td btn-green" style="padding:4px 12px;font-size:11px;position:relative;overflow:hidden;" onclick="claimDailyTask(' + i + ')">领取奖励</button>';
-                else h += '<span class="text-11" style="color:#5a7a5a;">' + t.progress + '/' + t.targetCount + '</span>';
-                h += '</div><div style="width:100%;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pp + '%;background:' + (t.completed ? '#4caf50' : '#fbbf24') + ';border-radius:3px;"></div></div>';
-                if (t.rewards && t.rewards.length > 0) { h += '<div class="text-muted" style="margin-top:6px;">🎁 奖励: '; for (var j = 0; j < t.rewards.length; j++) { var r = t.rewards[j]; if (r.type === 'money') h += '💰' + r.amount + ' '; else if (r.type === 'seed' && r.data) h += (r.data.icon || '🌱') + r.data.name + ' x' + (r.data.count || 1) + ' '; else if (r.type === 'fruit' && r.data) h += (r.data.icon || '🍎') + r.data.name + ' x' + (r.data.count || 1) + ' '; } h += '</div>'; }
+
+                // 任务标题行
+                h += '<div class="flex-between mb-6">';
+                h += '  <span class="text-13" style="color:' + (t.completed ? '#a5d6a7' : '#aaa') + ';">' + esc(t.targetDesc) + '</span>';
+
+                // 状态按钮/文字
+                if (t.claimed) {
+                    h += '<span class="text-11 glass" style="padding:2px 8px;color:#5a7a5a;">✅ 已领取</span>';
+                } else if (t.completed) {
+                    h += '<button class="btn-td btn-green" style="padding:4px 12px;font-size:11px;" onclick="claimDailyTask(' + i + ')">领取奖励</button>';
+                } else {
+                    h += '<span class="text-11" style="color:#5a7a5a;">' + t.progress + '/' + t.targetCount + '</span>';
+                }
+                h += '</div>'; // 关闭 flex-between
+
+                // 进度条
+                h += '<div style="width:100%;height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">';
+                h += '  <div style="height:100%;width:' + pp + '%;background:' + (t.completed ? '#4caf50' : '#fbbf24') + ';border-radius:3px;"></div>';
                 h += '</div>';
+
+                // 任务奖励文本
+                if (t.rewards && t.rewards.length > 0) {
+                    h += '<div class="text-muted" style="margin-top:6px;">🎁 奖励: ';
+                    for (var j = 0; j < t.rewards.length; j++) {
+                        var r = t.rewards[j];
+                        if (r.type === 'money') h += '💰' + r.amount + ' ';
+                        else if (r.type === 'seed' && r.data) h += (r.data.icon || '🌱') + r.data.name + ' x' + (r.data.count || 1) + ' ';
+                        else if (r.type === 'fruit' && r.data) h += (r.data.icon || '🍎') + r.data.name + ' x' + (r.data.count || 1) + ' ';
+                    }
+                    h += '</div>';
+                }
+                h += '</div>'; // 关闭 glass div
             }
+
+            // 全勤奖励区域
             if (pb && pb.rewards) {
                 h += '<div class="glass p-12" style="margin-top:12px;border-color:rgba(252,211,77,0.12);background:rgba(252,211,77,0.04);">';
                 h += '<div class="flex-between"><span class="text-12 text-gold fw-600">🏆 全勤奖励</span>';
-                if (allC && allCl) h += '<span class="text-11" style="color:#4ade80;">✅ 已领取</span>';
-                else if (allC) h += '<span class="text-11 text-gold">✨ 已完成！</span>';
-                else h += '<span class="text-11" style="color:#5a7a5a;">完成全部任务领取</span>';
-                h += '</div><div class="text-11" style="color:#5a7a5a;margin-top:4px;">';
-                for (var k = 0; k < pb.rewards.length; k++) { var r = pb.rewards[k]; if (r.type === 'money') h += '💰' + r.amount + ' '; else if (r.type === 'seed' && r.data) h += (r.data.icon || '🌱') + r.data.name + ' x' + (r.data.count || 1) + ' '; }
+
+                if (allC && allCl) {
+                    h += '<span class="text-11" style="color:#4ade80;">✅ 已领取</span>';
+                } else if (allC) {
+                    h += '<span class="text-11 text-gold">✨ 已完成！</span>';
+                } else {
+                    h += '<span class="text-11" style="color:#5a7a5a;">完成全部任务领取</span>';
+                }
+                h += '</div>';
+
+                h += '<div class="text-11" style="color:#5a7a5a;margin-top:4px;">';
+                for (var k = 0; k < pb.rewards.length; k++) {
+                    var r = pb.rewards[k];
+                    if (r.type === 'money') h += '💰' + r.amount + ' ';
+                    else if (r.type === 'seed' && r.data) h += (r.data.icon || '🌱') + r.data.name + ' x' + (r.data.count || 1) + ' ';
+                }
                 h += '</div></div>';
             }
+
             document.getElementById('dailyTasksContent').innerHTML = h;
         }
+
+
         function claimDailyTask(idx) { doAction('claim_daily_task', { taskIndex: idx }); }
 
         // 导航切换
