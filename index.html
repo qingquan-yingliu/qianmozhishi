@@ -2582,7 +2582,7 @@
             if (msg.staminaMax !== undefined && playerData) { playerData.staminaMax = msg.staminaMax; updStamina(); }
             if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
             if (msg.plots && playerData && a !== 'visit_farm') {
-                if (a === 'water' && visitingOwner) updateVisitPlots(msg.plots, msg.cages);
+                if (a === 'water' && visitingOwner) updateVisitPlots(msg.plots, msg.cages, msg.decorations);
                 else { playerData.plots = msg.plots; renderPlots(); }
             }
             if (msg.seeds && playerData && a !== 'visit_farm') playerData.seeds = msg.seeds;
@@ -2648,8 +2648,20 @@
                     break;
                 case 'my_cages': if (ok && playerData) { playerData.cages = msg.cages; playerData.animals = msg.animals; renderCages(); } break;
                 case 'visit_farm':
-                    if (ok) { var isRefresh = (visitingOwner === msg.owner); if (isRefresh) updateVisitPlots(msg.plots, msg.cages); else { renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors, msg.cages); closePanel('panelVisit'); addActionOk('来到了 ' + msg.owner + ' 的农场'); } }
-                    else { renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors, msg.cages, msg.decorations); if (!visitingOwner) addActionFail(msg.msg); } break;
+                    if (ok) { 
+                        var isRefresh = (visitingOwner === msg.owner); 
+                        if (isRefresh) {
+                            updateVisitPlots(msg.plots, msg.cages, msg.decorations); 
+                        } else { 
+                            renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors, msg.cages, msg.decorations); 
+                            closePanel('panelVisit'); 
+                            addActionOk('来到了 ' + msg.owner + ' 的农场'); 
+                        } 
+                    } else { 
+                        renderVisitFarm(msg.owner, msg.farmId, msg.plots, msg.visitors, msg.cages, msg.decorations); 
+                        if (!visitingOwner) addActionFail(msg.msg); 
+                    } 
+                    break;
                 case 'go_home':
                     if (ok) { visitingOwner = null; visitingFarmId = null; closePanel('panelVisit'); var vbar = document.getElementById('visitStatusBar'); if (vbar) vbar.remove(); var ft = document.querySelector('.farm-title'); if (ft && playerData) ft.innerHTML = '<span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ' + (playerData.farmId || '???') + '</span>'; addActionOk('回到了自己的农场'); var ct = document.querySelector('.cage-title'); if (ct) ct.textContent = '🐾 圈养区'; doAction('my_farm'); } break;
                 case 'friend_list': if (ok) { cachedFriendList = (msg.friends || []).map(function (f) { return f.username; }); renderFriendsPanel(msg.friends, msg.requests); } break;
@@ -3249,7 +3261,24 @@
             document.getElementById('visitContent').innerHTML = h; openPanel('panelVisit');
         }
         function doVisit() { var fid = document.getElementById('visitFarmIdInput').value.trim().toUpperCase(); if (!fid) return; doAction('visit_farm', { farmId: fid }); }
-        function doGoHome() { var ab = document.getElementById('myFarmActions'); if (ab) ab.style.display = 'flex'; if (playerData) renderDecorationsArea(playerData.decorations, false); doAction('go_home'); }
+        function doGoHome() { 
+            var ab = document.getElementById('myFarmActions'); 
+            if (ab) ab.style.display = 'flex'; 
+            if (playerData) renderDecorationsArea(playerData.decorations, false); 
+            
+            // 立即在前端清除串门状态
+            visitingOwner = null; 
+            visitingFarmId = null;
+            
+            var vbar = document.getElementById('visitStatusBar'); 
+            if (vbar) vbar.remove(); 
+            var ft = document.querySelector('.farm-title'); 
+            if (ft && playerData) ft.innerHTML = '<span>🏡 我的农场</span><span class="farm-id" id="farmIdDisplay">ID: ' + (playerData.farmId || '???') + '</span>'; 
+            var ct = document.querySelector('.cage-title'); 
+            if (ct) ct.textContent = '🐾 圈养区'; 
+            
+            doAction('go_home'); 
+        }
 
         function renderVisitFarm(owner, fid, plots, visitors, cages, decorations) {
             var ab = document.getElementById('myFarmActions'); if (ab) ab.style.display = 'none';
@@ -3310,27 +3339,32 @@
             cg.innerHTML = (cages && cages.length > 0) ? buildCageHtml(cages) : '<div class="text-center text-12 p-10" style="color:#4a5a4a;grid-column:1/-1;">没有圈养数据</div>';
         }
 
-        function updateVisitPlots(plots, cages) {
-            var nh = JSON.stringify(plots); if (nh === _lastVisitPlotsHash) return; _lastVisitPlotsHash = nh;
-            function bph(pl, idx, cls, icls, ncls, scls) {
-                var h = '', cw = pl.plant && !pl.plant.mature && !(pl.plant.friendWaters || []).some(function (fw) { return fw.username === username; }), im = pl.plant && (pl.plant.mature || (pl.plant.progress || 0) >= 1);
-                h += '<div class="' + cls + (im ? ' mature' : '') + (cw ? '' : ' empty') + '"' + (cw ? ' onclick="doVisitWater(' + idx + ')" style="cursor:pointer;"' : '') + '>';
-                if (pl.plant) {
-                    var pg = Math.max(0, Math.min(1, pl.plant.progress || 0));
-                    h += '<span class="' + icls + '">' + (im ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</span><span class="' + ncls + '">' + esc(pl.plant.name) + '</span>';
-                    if (im) h += '<span class="' + scls + '" style="color:#fcd34d;">已成熟</span>';
-                    else {
-                        h += '<span class="' + scls + '">' + Math.floor(pg * 100) + '%</span>'; if (cls === 'plot') h += '<div class="plot-progress-bar"><div class="plot-progress-fill" style="width:' + Math.floor(pg * 100) + '%"></div></div>';
-                        var mw = (pl.plant.friendWaters || []).some(function (fw) { return fw.username === username; }), wc = (pl.plant.friendWaters || []).length;
-                        if (mw) h += '<span class="' + scls + '" style="color:#67e8f9;">💧已浇水' + (wc > 1 ? '(' + wc + '人)' : '') + '</span>';
-                        else h += '<span class="' + scls + '" style="color:#93c5fd;">💧点击浇水</span>';
-                    }
-                } else { h += '<span class="' + icls + '" style="opacity:0.3;">🟫</span><span class="' + ncls + '" style="color:#4a5a4a;">空地</span>'; }
-                h += '</div>'; return h;
+        function updateVisitPlots(plots, cages, decorations) {
+            var nh = JSON.stringify(plots); 
+            if (nh !== _lastVisitPlotsHash) {
+                _lastVisitPlotsHash = nh;
+                function bph(pl, idx, cls, icls, ncls, scls) {
+                    var h = '', cw = pl.plant && !pl.plant.mature && !(pl.plant.friendWaters || []).some(function (fw) { return fw.username === username; }), im = pl.plant && (pl.plant.mature || (pl.plant.progress || 0) >= 1);
+                    h += '<div class="' + cls + (im ? ' mature' : '') + (cw ? '' : ' empty') + '"' + (cw ? ' onclick="doVisitWater(' + idx + ')" style="cursor:pointer;"' : '') + '>';
+                    if (pl.plant) {
+                        var pg = Math.max(0, Math.min(1, pl.plant.progress || 0));
+                        h += '<span class="' + icls + '">' + (im ? (pl.plant.fruitIcon || '🍎') : (pl.plant.icon || '🌱')) + '</span><span class="' + ncls + '">' + esc(pl.plant.name) + '</span>';
+                        if (im) h += '<span class="' + scls + '" style="color:#fcd34d;">已成熟</span>';
+                        else {
+                            h += '<span class="' + scls + '">' + Math.floor(pg * 100) + '%</span>'; if (cls === 'plot') h += '<div class="plot-progress-bar"><div class="plot-progress-fill" style="width:' + Math.floor(pg * 100) + '%"></div></div>';
+                            var mw = (pl.plant.friendWaters || []).some(function (fw) { return fw.username === username; }), wc = (pl.plant.friendWaters || []).length;
+                            if (mw) h += '<span class="' + scls + '" style="color:#67e8f9;">💧已浇水' + (wc > 1 ? '(' + wc + '人)' : '') + '</span>';
+                            else h += '<span class="' + scls + '" style="color:#93c5fd;">💧点击浇水</span>';
+                        }
+                    } else { h += '<span class="' + icls + '" style="opacity:0.3;">🟫</span><span class="' + ncls + '" style="color:#4a5a4a;">空地</span>'; }
+                    h += '</div>'; return h;
+                }
+                var pg = document.getElementById('plotsGrid'); if (pg) { var mh = ''; for (var i = 0; i < plots.length; i++)mh += bph(plots[i], i, 'plot', 'plot-icon', 'plot-name', 'plot-progress'); pg.innerHTML = mh; }
+                var vfv = document.getElementById('visitFarmView'); if (vfv) { var vpg = vfv.querySelector('.visit-plots-grid'); if (vpg) { var ph = ''; for (var j = 0; j < plots.length; j++)ph += bph(plots[j], j, 'visit-plot', 'vp-icon', 'vp-name', 'vp-status'); vpg.innerHTML = ph; } }
             }
-            var pg = document.getElementById('plotsGrid'); if (pg) { var mh = ''; for (var i = 0; i < plots.length; i++)mh += bph(plots[i], i, 'plot', 'plot-icon', 'plot-name', 'plot-progress'); pg.innerHTML = mh; }
-            var vfv = document.getElementById('visitFarmView'); if (vfv) { var vpg = vfv.querySelector('.visit-plots-grid'); if (vpg) { var ph = ''; for (var j = 0; j < plots.length; j++)ph += bph(plots[j], j, 'visit-plot', 'vp-icon', 'vp-name', 'vp-status'); vpg.innerHTML = ph; } }
             if (cages) { var cg = document.getElementById('cagesGrid'); if (cg) cg.innerHTML = buildCageHtml(cages); }
+            // 实时同步更新好友的装饰品
+            if (decorations) { renderDecorationsArea(decorations, true); }
         }
 
         // 物品栏
