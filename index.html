@@ -3737,6 +3737,9 @@
 
             var seeds = shop.items.filter(function (it) { return it.type === 'seed'; });
             var fertilizers = shop.items.filter(function (it) { return it.type === 'fertilizer'; });
+            // 【新增】筛选饲料和装饰
+            var feeds = shop.items.filter(function (it) { return it.type === 'feed'; });
+            var decorations = shop.items.filter(function (it) { return it.type === 'decoration'; });
 
             var waterTools = shop.items.filter(function (it) {
                 if (it.id.startsWith('watering_can_lv')) {
@@ -3750,6 +3753,7 @@
                 return it.type === 'tool' && !it.id.startsWith('watering_can_lv');
             });
 
+            // ... (种子渲染代码保持不变) ...
             if (seeds.length > 0) {
                 h += '<div style="font-size:12px;color:#a5d6a7;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🌱 种子(一种多收)</div>';
                 for (var i = 0; i < seeds.length; i++) {
@@ -3768,6 +3772,8 @@
                     h += '</div></div>';
                 }
             }
+
+            // ... (肥料渲染代码保持不变) ...
             if (fertilizers.length > 0) {
                 h += '<div style="font-size:12px;color:#fcd34d;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🧪 肥料</div>';
                 for (var j = 0; j < fertilizers.length; j++) {
@@ -3777,6 +3783,34 @@
                 }
             }
 
+            // 【新增】饲料渲染
+            if (feeds.length > 0) {
+                h += '<div style="font-size:12px;color:#f472b6;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🥡 饲料</div>';
+                for (var fi = 0; fi < feeds.length; fi++) {
+                    var item = feeds[fi];
+                    var feedVal = (item.effect && item.effect.foodValue) ? item.effect.foodValue : 20;
+                    h += '<div class="shop-item"><div class="si-info"><div class="si-name">' + (item.icon || '🥡') + ' ' + esc(item.name) + '</div>';
+                    h += '<div class="si-desc">' + esc(item.desc || '') + ' <span style="color:#f472b6;font-size:10px;">(食物+' + feedVal + ')</span></div></div>';
+                    h += '<span class="si-price">💰' + item.price + '</span>';
+                    h += '<div style="display:flex;flex-direction:column;gap:3px;">';
+                    h += '<button onclick="doBuy(\'' + item.id + '\',1)">买1</button>';
+                    h += '<button onclick="doBuy(\'' + item.id + '\',5)" style="background:#388e3c;">买5</button>';
+                    h += '</div></div>';
+                }
+            }
+
+            // 【新增】装饰品渲染
+            if (decorations.length > 0) {
+                h += '<div style="font-size:12px;color:#a78bfa;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🎨 农场装饰</div>';
+                for (var di = 0; di < decorations.length; di++) {
+                    var item = decorations[di];
+                    h += '<div class="shop-item"><div class="si-info"><div class="si-name">' + (item.icon || '🎨') + ' ' + esc(item.name) + '</div>';
+                    h += '<div class="si-desc">' + esc(item.desc || '') + '</div></div>';
+                    h += '<span class="si-price">💰' + item.price + '</span><button onclick="doBuy(\'' + item.id + '\',1)">购买</button></div>';
+                }
+            }
+
+            // ... (工具/水壶/动物/宠物渲染代码保持不变) ...
             if (otherTools.length > 0) {
                 h += '<div style="font-size:12px;color:#67e8f9;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px;">🔨 工具</div>';
                 for (var k = 0; k < otherTools.length; k++) {
