@@ -1529,7 +1529,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.5</h1>
+            <h1>🌾 阡陌之诗 v1.9.6</h1>
             <div class="subtitle">种地·采集·交友·交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -3923,8 +3923,8 @@
             document.getElementById('rankingContent').innerHTML = h;
         }
 
-         function renderWeeklyRankingPanel(ranking, myRank) {
-             var h = '<div style="text-align:right;margin-bottom:8px;">';
+        function renderWeeklyRankingPanel(ranking, myRank) {
+            var h = '<div style="text-align:right;margin-bottom:8px;">';
             h += '<button style="padding:4px 12px;background:rgba(255,255,255,0.1);color:#ccc;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-size:11px;cursor:pointer;" onclick="doAction(\'weekly_ranking\')">🔄 刷新数据</button>';
             h += '</div>';
             if (!ranking || ranking.length === 0) {
@@ -3933,7 +3933,7 @@
             }
 
             // 按时间排序 (服务器应该已经排过，但前端再保险一下)
-            ranking.sort(function(a, b) { return a.completedAt - b.completedAt; });
+            ranking.sort(function (a, b) { return a.completedAt - b.completedAt; });
 
             var h = '';
 
@@ -3942,7 +3942,7 @@
                 var myEntry = ranking[myRank];
                 var date = new Date(myEntry.completedAt);
                 var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
-                
+
                 h += '<div style="background:rgba(103,232,249,0.1);border:1px solid rgba(103,232,249,0.2);border-radius:10px;padding:12px;margin-bottom:12px;text-align:center;">';
                 h += '<div style="font-size:12px;color:#888;">你的挑战成绩</div>';
                 h += '<div style="font-size:24px;color:#67e8f9;font-weight:600;margin:4px 0;">第 ' + (myRank + 1) + ' 名</div>';
@@ -3951,12 +3951,12 @@
             }
 
             h += '<div style="font-size:12px;color:#888;margin-bottom:8px;">最快完成记录</div>';
-            
+
             for (var i = 0; i < ranking.length; i++) {
                 var p = ranking[i];
                 var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
                 var isMe = p.username === username;
-                
+
                 var date = new Date(p.completedAt);
                 var dateStr = (date.getMonth() + 1) + '/' + date.getDate() + ' ' + date.getHours() + ':' + String(date.getMinutes()).padStart(2, '0');
 
@@ -3966,10 +3966,10 @@
                 h += '<span style="font-size:13px;display:flex;align-items:center;gap:6px;">';
                 if (medal) h += '<span style="font-size:18px;">' + medal + '</span>';
                 else h += '<span style="font-size:13px;color:#666;min-width:20px;text-align:center;">#' + (i + 1) + '</span>';
-                
+
                 h += '<span style="color:' + (isMe ? '#67e8f9' : '#a5d6a7') + ';font-weight:600;">' + esc(p.username) + (isMe ? ' (你)' : '') + '</span>';
                 h += '</span>';
-                
+
                 h += '<span style="font-size:12px;color:#888;">⏱️ ' + dateStr + '</span>';
                 h += '</div>';
                 h += '</div>';
@@ -4250,13 +4250,31 @@
             } else {
                 for (var i = 0; i < friends.length; i++) {
                     var f = friends[i];
-                    var friendshipBar = Math.min(100, (f.friendship / 100) * 100); // 示例：每100点满一格
+                    var cur = f.friendship || 0;
+                    var min = f.levelMin || 0;
+                    var max = f.levelMax;
+
+                    var percent = 0;
+                    var progressText = "";
+
+                    if (max === null || max === undefined || max === Infinity) {
+                        // 已达到最高等级
+                        percent = 100;
+                        progressText = cur + " (已满级)";
+                    } else {
+                        // 计算当前等级内的进度
+                        // 比如当前250，等级范围100~500。进度 = (250-100) / (500-100)
+                        var range = max - min;
+                        if (range <= 0) range = 100; // 防止除以0
+                        percent = Math.max(0, Math.min(100, ((cur - min) / range) * 100));
+                        progressText = cur + " / " + max;
+                    }
                     h += '<div class="friend-item">';
                     h += '<div style="flex:1;">';
                     h += '<div><span class="fi-name">' + (f.online ? '🟢' : '⚫') + ' ' + esc(f.username) + '</span><span class="fi-id">' + f.farmId + '</span></div>';
-                    h += '<div style="font-size:10px;color:#888;margin-top:2px;">❤️ 亲密度 ' + f.friendship + ' · ' + esc(f.levelName) + '</div>';
-                    h += '<div style="width:100px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:2px;">';
-                    h += '<div style="height:100%;width:' + friendshipBar + '%;background:#ff69b4;border-radius:2px;"></div>';
+                    h += '<div style="font-size:10px;color:#888;margin-top:2px;">❤️ ' + esc(f.levelName) + ' <span style="color:#666;">(' + progressText + ')</span></div>';
+                    h += '<div style="width:100px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:3px;overflow:hidden;">';
+                    h += '<div style="height:100%;width:' + percent + '%;background:linear-gradient(90deg, #ff69b4, #ff8da1);border-radius:2px;transition:width 0.3s;"></div>';
                     h += '</div>';
                     h += '</div>';
                     h += '<div class="fi-btns">';
