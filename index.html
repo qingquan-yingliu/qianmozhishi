@@ -2624,10 +2624,44 @@
                     if (msg.animals) playerData.animals = msg.animals; if (msg.pets) playerData.pets = msg.pets;
                     if (!visitingOwner) renderCages(); break;
                 case 'inventory':
-                    if (ok) { playerData.seeds = msg.seeds; playerData.fruits = msg.fruits; playerData.items = msg.items; playerData.money = msg.money; renderInventoryPanel(msg.seeds, msg.fruits, msg.items, msg.money); if (window._pendingSellRender) { window._pendingSellRender = false; renderSellPanel(); } } break;
-                case 'shop_list': if (ok) { renderShopPanel(msg.shop, msg.money); if (window._shopScrollRestore !== undefined) { var box = document.querySelector('#panelShop .panel-box'); if (box) box.scrollTop = window._shopScrollRestore; window._shopScrollRestore = undefined; } } break;
+                    if (ok) {
+                        playerData.seeds = msg.seeds;
+                        playerData.fruits = msg.fruits;
+                        playerData.items = msg.items;
+                        playerData.money = msg.money;
+                        renderInventoryPanel(msg.seeds, msg.fruits, msg.items, msg.money);
+                        if (document.getElementById('panelSell').classList.contains('show')) {
+                            renderSellPanel();
+                        }
+                        // 重置标记
+                        window._noLoadingRender = false;
+                    }
+                    break;
+                case 'shop_list':
+                    if (ok) {
+                        renderShopPanel(msg.shop, msg.money);
+                        if (window._shopScrollRestore !== undefined) {
+                            var box = document.querySelector('#panelShop .panel-box');
+                            if (box) box.scrollTop = window._shopScrollRestore;
+                            window._shopScrollRestore = undefined;
+                        }
+                    }
+                    break;
                 case 'shop_buy':
-                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); if (msg.money !== undefined && playerData) playerData.money = msg.money; if (msg.waterBoostLevel !== undefined && playerData) playerData.waterBoostLevel = msg.waterBoostLevel; if (msg.seeds && playerData) playerData.seeds = msg.seeds; if (msg.items && playerData) playerData.items = msg.items; if (msg.plots && playerData) { playerData.plots = msg.plots; renderPlots(); } if (msg.cages && playerData) { playerData.cages = msg.cages; renderCages(); } if (msg.animals && playerData) playerData.animals = msg.animals; setTimeout(function () { var box = document.querySelector('#panelShop .panel-box'); var st = box ? box.scrollTop : 0; doAction('shop_list'); window._shopScrollRestore = st; }, 150); }
+                    if (ok) {
+                        addActionOk(msg.msg);
+                        showToast(msg.msg, true);
+                        if (msg.money !== undefined && playerData)
+                            playerData.money = msg.money;
+                        if (msg.waterBoostLevel !== undefined && playerData)
+                            playerData.waterBoostLevel = msg.waterBoostLevel;
+                        if (msg.seeds && playerData) playerData.seeds = msg.seeds;
+                        if (msg.items && playerData) playerData.items = msg.items; if (msg.plots && playerData) { playerData.plots = msg.plots; renderPlots(); } if (msg.cages && playerData) { playerData.cages = msg.cages; renderCages(); } if (msg.animals && playerData) playerData.animals = msg.animals; setTimeout(function () { var box = document.querySelector('#panelShop .panel-box'); var st = box ? box.scrollTop : 0; doAction('shop_list'); window._shopScrollRestore = st; }, 150);
+                        var shopBox = document.querySelector('#panelShop .panel-box');
+                        var currentScroll = shopBox ? shopBox.scrollTop : 0;
+                        window._shopScrollRestore = currentScroll;
+                        doAction('shop_list');
+                    }
                     else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
                 case 'sell_fruit': if (ok) { showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
                 case 'sell_seed': if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
@@ -2642,10 +2676,14 @@
                 case 'sell_item':
                     if (ok) {
                         showToast(msg.msg, true);
-                        if (msg.money !== undefined && playerData) { playerData.money = msg.money; updMoney(); }
+                        if (msg.money !== undefined && playerData) {
+                            playerData.money = msg.money;
+                            updMoney();
+                        }
                         if (msg.items && playerData) playerData.items = msg.items;
                         if (document.getElementById('panelSell').classList.contains('show')) {
-                            renderSellPanel();
+                            window._noLoadingRender = true;
+                            doAction('inventory');
                         }
                     } else {
                         addActionFail(msg.msg);
@@ -3378,10 +3416,14 @@
         }
 
         // 物品栏
-        function openInventory() { 
-            document.getElementById('inContent').innerHTML = loadingPlaceholder(); 
-            openPanel('panelInv'); 
-            doAction('inventory'); }
+        function openInventory() {
+            var contentEl = document.getElementById('invContent');
+            if (contentEl) {
+                contentEl.innerHTML = loadingPlaceholder();
+            }
+            openPanel('panelInv');
+            doAction('inventory');
+        }
         function renderInventoryPanel(seeds, fruits, items, money) {
             var h = '<div class="text-13 text-gold mb-12">💰 金币: ' + money + '</div>';
             h += '<div class="inv-section"><div class="inv-section-title">🌱 种子</div><div class="inv-grid">';
@@ -3402,7 +3444,13 @@
         }
 
         // 商店
-        function openShop() { document.getElementById('shopContent').innerHTML = loadingPlaceholder(); openPanel('panelShop'); doAction('shop_list'); }
+        function openShop() {
+            if (!document.getElementById('panelShop').classList.contains('show')) {
+                document.getElementById('shopContent').innerHTML = loadingPlaceholder();
+            }
+            openPanel('panelShop');
+            doAction('shop_list');
+        }
         function renderShopPanel(shop, money) {
             var h = '<div class="text-13 text-gold mb-12">💰 你的金币: ' + money + '</div>';
             if (!shop || !shop.items || shop.items.length === 0) { h += '<div class="text-center p-12" style="color:#4a5a4a;">商店空空如也</div>'; document.getElementById('shopContent').innerHTML = h; return; }
@@ -3456,7 +3504,13 @@
         function doBuy(id, c) { doAction('shop_buy', { itemId: id, count: c || 1 }); }
 
         // 卖出
-        function openSell() { window._pendingSellRender = true; document.getElementById('sellContent').innerHTML = loadingPlaceholder(); openPanel('panelSell'); doAction('inventory'); }
+        function openSell() {
+            if (!document.getElementById('panelSell').classList.contains('show')) {
+                document.getElementById('sellContent').innerHTML = loadingPlaceholder();
+            }
+            openPanel('panelSell');
+            doAction('inventory');
+        }
         function renderSellPanel() {
             if (!playerData) return; var h = '<div class="text-13 text-gold mb-12">💰 当前金币: ' + playerData.money + '</div>';
             function secT(icon, label) { return '<div class="text-12 text-green" style="margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;">' + icon + ' ' + label + '</div>'; }
