@@ -152,8 +152,7 @@
             border: 1px solid rgba(76, 175, 80, 0.25);
             cursor: pointer;
             font-size: 12px;
-            transition: all 0.25s;
-            backdrop-filter: blur(4px);
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
             position: relative;
             overflow: hidden;
         }
@@ -1035,46 +1034,51 @@
             color: #6abf69;
         }
 
-        /* ===== 面板覆盖层 (修复布局跳动问题) ===== */
+        /* ===== 面板覆盖层 ===== */
         .panel-overlay {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0);
             z-index: 1000;
-            /* 提高层级，确保盖住其他内容 */
+            display: flex;
             justify-content: center;
             align-items: flex-end;
             overflow: hidden;
+            pointer-events: none;
+            visibility: hidden;
+            transition: background 0.2s ease, visibility 0s 0.2s;
         }
 
         .panel-overlay.show {
-            display: flex;
+            background: rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            visibility: visible;
+            transition: background 0.2s ease, visibility 0s 0s;
+        }
+
+        .panel-overlay.show .panel-box {
+            transform: translateY(0);
         }
 
         .panel-box {
             width: 100%;
             max-width: 500px;
             max-height: 75vh;
-            /* 限制最大高度 */
             background: #1a2e1e;
-            /* 提供纯色背景兜底，防止透明度叠加导致文字看不清 */
             background: linear-gradient(180deg, #1a2e1e 0%, #152218 100%);
             border-radius: 20px 20px 0 0;
             padding: 16px;
             overflow-y: auto;
-            /* 允许内部滚动 */
             overflow-x: hidden;
-            /* 禁止横向撑开 */
-            animation: fadeIn 0.15s ease;
             border-top: 1px solid rgba(106, 191, 105, 0.2);
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
             position: relative;
-            /* 建立新的堆叠上下文 */
             z-index: 1001;
+            transform: translateY(100%);
+            transition: transform 0.2s ease;
         }
 
         .panel-title {
@@ -1918,7 +1922,6 @@
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 10px;
-            backdrop-filter: blur(4px);
         }
 
         .glass:hover {
@@ -2027,7 +2030,7 @@
             border-radius: 10px;
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
             font-weight: 500;
         }
 
@@ -3127,10 +3130,11 @@
         function removeDecoration(id) { if (!confirm('确定收起这个装饰物？')) return; doAction('remove_decoration', { decorationId: id }); setTimeout(function () { renderDecorationsPanel(); refreshFarm(); }, 300); }
 
         // 周挑战
-        function openWeeklyChallenge() { 
+        function openWeeklyChallenge() {
             document.getElementById('weeklyChallengeContent').innerHTML = loadingPlaceholder();
-            openPanel('panelWeeklyChallenge'); 
-            doAction('weekly_challenge_info'); }
+            openPanel('panelWeeklyChallenge');
+            doAction('weekly_challenge_info');
+        }
         function renderWeeklyChallengePanel(ch, prog) {
             var h = '';
             if (!ch) {
@@ -3514,8 +3518,9 @@
                 var md = ranking[myRank];
                 h += '<div class="glass text-center p-12 mb-12" style="border-color:rgba(252,211,77,0.15);"><div class="text-12" style="color:#5a7a5a;">你的排名</div><div style="font-size:24px;color:#fcd34d;font-weight:600;margin:4px 0;">排名 ' + (myRank + 1) + '</div><div class="text-13 text-green">💰 ' + md.money + ' 金币</div></div>';
             }
-            h += '<div class="text-12 mb-8" style="color:#5a7a5a;">世界排行</div>';
-            for (var i = 0; i < ranking.length; i++) {
+            h += '<div class="text-12 mb-8" style="color:#5a7a5a;">世界排行 (前50)</div>';
+            var maxShow = Math.min(ranking.length, 50);
+            for (var i = 0; i < maxShow; i++) {
                 var p = ranking[i], medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '', isMe = p.username === username, bw = Math.max(5, Math.round((p.money / ranking[0].money) * 100));
                 h += '<div class="glass p-10 mb-8" style="border-color:' + (isMe ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)') + ';background:' + (isMe ? 'rgba(76,175,80,0.04)' : 'transparent') + ';">';
                 h += '<div class="flex-between mb-6"><span class="text-13" style="display:flex;align-items:center;gap:6px;">';
@@ -3534,7 +3539,8 @@
                 var me = ranking[myRank];
                 h += '<div class="glass text-center p-12 mb-12" style="border-color:rgba(167,139,250,0.15);"><div class="text-12" style="color:#5a7a5a;">你的最佳宠物排名</div><div style="font-size:24px;color:#c4b5fd;font-weight:600;margin:4px 0;">第 ' + (myRank + 1) + ' 名</div><div class="text-13 text-green">' + (me.speciesIcon || '🐾') + ' ' + esc(me.petName) + ' · 💰' + me.value + '</div></div>';
             }
-            for (var i = 0; i < ranking.length; i++) {
+            var maxShow = Math.min(ranking.length, 50);
+            for (var i = 0; i < maxShow; i++) {
                 var p = ranking[i], medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '', isMe = p.owner === username, bw = Math.max(5, Math.round((p.value / ranking[0].value) * 100));
                 h += '<div class="glass p-10 mb-8" style="border-color:' + (isMe ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.04)') + ';"><div class="flex-between" style="margin-bottom:4px;"><span class="text-13" style="display:flex;align-items:center;gap:6px;">';
                 if (medal) h += '<span style="font-size:18px;">' + medal + '</span>'; else h += '<span style="color:#4a5a4a;min-width:20px;text-align:center;">#' + (i + 1) + '</span>';
@@ -3644,10 +3650,11 @@
         function removeTradeMessage(id) { var ma = document.getElementById('msgArea'), el = ma.querySelector('[data-trade-id="' + id + '"]'); if (el) { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300); } }
 
         // 好友
-        function openFriends() { 
+        function openFriends() {
             document.getElementById('friendsContent').innerHTML = loadingPlaceholder();
             openPanel('panelFriends');
-            doAction('friend_list');  }
+            doAction('friend_list');
+        }
         function renderFriendsPanel(friends, requests) {
             cachedFriendList = (friends || []).map(function (f) { return f.username; });
             var h = '<div class="flex-gap-6 mb-12"><input type="text" id="addFriendInput" placeholder="输入昵称" class="input-dark" style="flex:1;">';
