@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.19</h1>
+            <h1>🌾 阡陌之诗 v1.9.20</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -3862,11 +3862,20 @@
         function appendMsg(el) { var a = document.getElementById('msgArea'); a.appendChild(el); while (a.children.length > 100) a.removeChild(a.firstChild); if (!_scrollPending) { _scrollPending = true; requestAnimationFrame(function () { a.scrollTop = a.scrollHeight; _scrollPending = false; }); } }
 
         // 宠物
-        function openPets() { document.getElementById('petsContent').innerHTML = loadingPlaceholder(); openPanel('panelPets'); doAction('my_pets'); }
+        function openPets(noLoading) { 
+            // 如果 noLoading 为真，则不显示加载占位符，防止页面闪烁跳动
+            if (!noLoading) {
+                document.getElementById('petsContent').innerHTML = loadingPlaceholder(); 
+            }
+            openPanel('panelPets'); 
+            doAction('my_pets'); 
+        }
+
         function getRarityLabel(r) { var m = { 'common': '<span class="rarity-common">普通</span>', 'uncommon': '<span class="rarity-uncommon">优秀</span>', 'rare': '<span class="rarity-rare">稀有</span>', 'epic': '<span class="rarity-epic">史诗</span>', 'legendary': '<span class="rarity-legendary">传说</span>' }; return m[r] || m.common; }
         function getRarityText(r) { var m = { 'common': '普通', 'uncommon': '优秀', 'rare': '稀有', 'epic': '史诗', 'legendary': '传说' }; return m[r] || '普通'; }
         function getMoodColor(m) { return m >= 70 ? '#4caf50' : m >= 40 ? '#fbbf24' : '#ef4444'; }
         function getMoodText(m) { return m >= 80 ? '😊 开心' : m >= 60 ? '🙂 不错' : m >= 40 ? '😐 一般' : m >= 20 ? '😟 低落' : '😢 难过'; }
+        
         function renderPetsPanel(pets) {
             var h = '';
             if (!pets || pets.length === 0) { h += '<div class="text-center p-12" style="color:#4a5a4a;"><div style="font-size:36px;margin-bottom:10px;">🐾</div><div class="text-13">还没有宠物</div><div class="text-muted" style="margin-top:4px;">去野外捕捉或商店购买吧</div></div>'; }
@@ -3884,12 +3893,29 @@
                 }
             }
             document.getElementById('petsContent').innerHTML = h;
+            if (window._petsScrollRestore !== undefined) {
+                setTimeout(function() {
+                    var petsBox = document.querySelector('#panelPets .panel-box');
+                    if (petsBox) {
+                        petsBox.scrollTop = window._petsScrollRestore;
+                    }
+                    window._petsScrollRestore = undefined; 
+                    }, 10);
+            }
         }
         function openPetDetail(pid) {
             if (!playerData || !playerData.pets) return; 
             var pet = playerData.pets.find(function (p) { return p.id === pid; }); 
             if (!pet) return;
+
+            // 在关闭我的宠物面板前，记录当前的滑动条位置
+            var petsBox = document.querySelector('#panelPets .panel-box');
+            if (petsBox) {
+                window._petsScrollRestore = petsBox.scrollTop;
+            }
+
             closePanel('panelPets');
+
             var now = Date.now(), onAdv = pet.adventureEndTime && now < pet.adventureEndTime, advReady = pet.adventureEndTime && now >= pet.adventureEndTime;
             var h = '<div class="text-center mb-12"><div style="font-size:48px;margin-bottom:6px;">' + (pet.speciesIcon || '🐾') + '</div>';
             h += '<div style="font-size:18px;color:#c4b5fd;font-weight:600;">' + esc(pet.name) + '</div>';
@@ -3906,14 +3932,15 @@
             h += '<button class="action-btn action-btn-purple w-full" style="padding:10px;" onclick="doPetInteract(\'' + pet.id + '\')">❤️ 互动（心情+15）</button>';
             h += '<button class="action-btn action-btn-cyan w-full" style="padding:10px;" onclick="doPetRename(\'' + pet.id + '\')">✏️ 改名</button>';
             h += '<button class="action-btn action-btn-red w-full" style="padding:10px;" onclick="doPetRelease(\'' + pet.id + '\')">🕊️ 放生（回收一半价值）</button>';
-            h += '<button class="action-btn w-full" style="padding:10px; background:rgba(255,255,255,0.05); color:#aaa; margin-top:8px; border:1px solid rgba(255,255,255,0.1);" onclick="closePanel(\'panelPetDetail\'); openPets();">🔙 返回我的宠物</button></div>';
+            h += '<button class="action-btn w-full" style="padding:10px; background:rgba(255,255,255,0.05); color:#aaa; margin-top:8px; border:1px solid rgba(255,255,255,0.1);" onclick="closePanel(\'panelPetDetail\'); openPets(true);">🔙 返回宠物列表</button></div>';
             document.getElementById('petDetailContent').innerHTML = h; 
             openPanel('panelPetDetail');
+
             var closeBtn = document.querySelector('#panelPetDetail .panel-close');
             if (closeBtn) {
                 closeBtn.onclick = function() {
                     closePanel('panelPetDetail');
-                    openPets();
+                    openPets(true);
                 };
             }
         }
@@ -3926,13 +3953,13 @@
             if (!n || !n.trim()) return; 
             doAction('rename_pet', { petId: id, name: n.trim() }); 
             closePanel('panelPetDetail'); 
-            openPets(); 
+            openPets(true); 
         }
         function doPetRelease(id) { 
             if (!confirm('确定放生这只宠物？将获得一半价值的金币。')) return; 
             doAction('release_pet', { petId: id }); 
             closePanel('panelPetDetail'); 
-            openPets(); 
+            openPets(true); 
         }
 
         // 邮件
