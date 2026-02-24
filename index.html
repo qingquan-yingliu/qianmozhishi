@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.16</h1>
+            <h1>🌾 阡陌之诗 v1.9.17</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -2499,15 +2499,20 @@
                 h += '<div class="cage' + (starving ? ' starving' : (!c.animal ? ' empty' : '')) + '" onclick="clickCage(' + i + ')">';
 
                 if (c.animal) {
+                    // 计算剩余时间
                     var realH = calcRealTimeLeft(c);
                     var timeStr = formatHours(realH);
-                    var statusText = starving ? '⚠️ 食物不足！动物正在死亡' : '余 ' + timeStr;
+
+                    // 状态文本
+                    var statusText = starving ? '⚠️ 正在死亡' : '余 ' + timeStr;
                     var statusColor = starving ? '#ef4444' : '#a5d6a7';
+
                     h += '<span class="cage-icon">' + (c.animal.icon || '🐾') + '</span>';
                     h += '<span class="cage-name">' + esc(c.animal.name) + '</span>';
                     h += '<span class="cage-count">数量: ' + c.animal.count + '</span>';
                     h += '<span class="cage-food">' + (c.food >= 0 ? '🍖' + Math.floor(c.food) : '⚠️饥饿') + '</span>';
-                    h += '<span class="cage-status" style="font-size:10px;">耗' + c.animal.foodPerHour + '/h | <span style="color:' + statusColor + '">' + statusText + '</span></span>';
+                    h += '<span class="cage-status" style="font-size:10px;color:' + statusColor + '">' + statusText + '</span>';
+
                 } else {
                     h += '<span class="cage-icon" style="opacity:0.3;">🟫</span>';
                     h += '<span class="cage-name" style="color:#4a5a4a;">空圈</span>';
@@ -2920,6 +2925,7 @@
 
         function clickCage(cageId) {
             if (!playerData) return;
+            // 如果是正在串门，走服务器逻辑获取好友的详情HTML
             if (visitingOwner) {
                 addSysMsg('正在操作 ' + visitingOwner + ' 的圈养区');
                 doAction('cage_detail', { farmId: visitingFarmId, cageId: cageId });
@@ -2944,11 +2950,11 @@
                     h += '</div>';
                 }
             } else {
-                // === 已有动物状态 ===
+                // === 已有动物状态 (修改重点在此处) ===
                 var a = cage.animal, starving = cage.food < 0, foodStatus = cage.food >= 0 ? Math.floor(cage.food) : 0;
                 var realH = calcRealTimeLeft(cage), timeStr = formatHours(realH);
 
-                // 计算并显示繁衍状态
+                // 计算繁衍状态
                 var breedCount = a.breedCount || 0;
                 var breedStatusStr = '';
                 if (a.count < 2) {
@@ -2958,17 +2964,19 @@
                 } else {
                     breedStatusStr = '<span style="color:#a5d6a7;">(已生育 ' + breedCount + '/10 次)</span>';
                 }
-
+                var totalConsume = a.foodPerHour * a.count;
                 h += '<div class="text-center mb-12"><div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
                 h += '<div style="font-size:16px;color:#fcd34d;">' + esc(a.name) + '</div>';
                 h += '<div class="text-muted" style="margin-top:4px;">第' + (cageId + 1) + '个圈</div>';
                 h += '<div style="font-size:14px;color:#67e8f9;margin-top:6px;">数量: ' + a.count + ' 只 ' + breedStatusStr + '</div>';
+
                 if (starving) {
                     h += '<div style="font-size:13px;color:#ef4444;margin-top:6px;">⚠️ 食物不足！动物正在死亡</div>';
                 } else {
                     h += '<div style="font-size:13px;color:#a5d6a7;margin-top:6px;">🍖 食物: ' + foodStatus + ' (预计还能撑 ' + timeStr + ')</div>';
                 }
-                h += '<div class="text-muted" style="margin-top:4px;">消耗: ' + a.foodPerHour + '/小时 | 售价: 💰' + a.sellPrice + '/只</div></div><div class="flex-col-6">';
+
+                h += '<div class="text-muted" style="margin-top:4px;">总消耗: ' + totalConsume + '/小时 (单只' + a.foodPerHour + ') | 售价: 💰' + a.sellPrice + '/只</div></div><div class="flex-col-6">';
 
                 var sa = (playerData.animals || []).filter(function (an) { return an.id === a.id; });
                 if (sa.length > 0) {
@@ -3010,9 +3018,8 @@
 
             // == 饲料槽存取UI (动态读取所有饲料) ==
             var allFeeds = (playerData.items || []).filter(function (it) { return it.type === 'feed' && !it.unsalable; });
-            // 补充查找已搅拌饲料(它是unsalable的)
             var ufItem = (playerData.items || []).find(function (it) { return it.id === 'universal_feed'; });
-            if (ufItem) allFeeds.unshift(ufItem); // 放到列表第一位
+            if (ufItem) allFeeds.unshift(ufItem);
 
             h += '<div class="glass p-8" style="margin-top:8px; border-color:rgba(106,191,105,0.3);">';
             h += '<div class="text-12 mb-6" style="color:#a5d6a7;">🌿 饲料槽</div>';
@@ -3035,7 +3042,7 @@
                 h += '<div class="text-11 text-muted mb-6">背包中没有饲料可存入。</div>';
             }
 
-            // 取出区域 (固定取出为已搅拌饲料，1点=1个)
+            // 取出区域
             h += '<div style="border-top:1px solid rgba(106,191,105,0.15); margin-top:8px; padding-top:8px;">';
             h += '<div class="text-11 text-muted mb-6" style="color:#7a9a7a;">将存粮打包为「已搅拌饲料」(1点=1个)取出：</div>';
             h += '<div class="flex-gap-4">';
