@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.14</h1>
+            <h1>🌾 阡陌之诗 v1.9.16</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -2456,32 +2456,28 @@
             var foodRate = cage.animal.foodPerHour;
             var breedTime = cage.animal.breedTime;
             var lastBreed = cage.animal.lastBreed || Date.now();
-            var breedCount = cage.animal.breedCount || 0; // 当前生育次数
+            var breedCount = cage.animal.breedCount || 0;
             var now = Date.now();
-
-            // 必须和后端的配置保持完全一致
             var MAX_BREED_TIMES = 10;
             var CAGE_CAPACITY = 1024;
-            var BABIES_PER_CYCLE = 2;
-
+            // var BABIES_PER_CYCLE = 2; // 旧逻辑废弃
             var hours = 0;
             // 限制最大推演次数，防止极端数据卡死循环 (5000小时 ≈ 208天)
             while (food > 0 && hours < 5000) {
                 var currentConsumption = count * foodRate;
-
                 // 如果剩下的食物不够吃完整整1小时，计算小数(满算)并返回
                 if (food < currentConsumption) {
                     return hours + (food / currentConsumption);
                 }
-
                 food -= currentConsumption;
                 hours++;
-
-                // 模拟推演时间线，看看这个小时里有没有触发繁殖
                 var simTime = now + (hours * 3600000);
                 if (count >= 2 && breedCount < MAX_BREED_TIMES && count < CAGE_CAPACITY) {
                     if ((simTime - lastBreed) >= breedTime) {
-                        count = Math.min(CAGE_CAPACITY, count + BABIES_PER_CYCLE);
+                        // === 新逻辑：增加20%，至少加1只 ===
+                        var increase = Math.floor(count * 0.2); // 20%
+                        if (increase < 1) increase = 1;         // 保底加1                       
+                        count = Math.min(CAGE_CAPACITY, count + increase);
                         lastBreed = simTime;
                         breedCount++; // 模拟一次生育
                     }
@@ -2503,11 +2499,15 @@
                 h += '<div class="cage' + (starving ? ' starving' : (!c.animal ? ' empty' : '')) + '" onclick="clickCage(' + i + ')">';
 
                 if (c.animal) {
+                    var realH = calcRealTimeLeft(c);
+                    var timeStr = formatHours(realH);
+                    var statusText = starving ? '⚠️ 食物不足！动物正在死亡' : '余 ' + timeStr;
+                    var statusColor = starving ? '#ef4444' : '#a5d6a7';
                     h += '<span class="cage-icon">' + (c.animal.icon || '🐾') + '</span>';
                     h += '<span class="cage-name">' + esc(c.animal.name) + '</span>';
                     h += '<span class="cage-count">数量: ' + c.animal.count + '</span>';
                     h += '<span class="cage-food">' + (c.food >= 0 ? '🍖' + Math.floor(c.food) : '⚠️饥饿') + '</span>';
-                    h += '<span class="cage-status">消耗' + c.animal.foodPerHour + '/时</span>';
+                    h += '<span class="cage-status" style="font-size:10px;">耗' + c.animal.foodPerHour + '/h | <span style="color:' + statusColor + '">' + statusText + '</span></span>';
                 } else {
                     h += '<span class="cage-icon" style="opacity:0.3;">🟫</span>';
                     h += '<span class="cage-name" style="color:#4a5a4a;">空圈</span>';
@@ -3024,7 +3024,7 @@
                 for (var fi = 0; fi < allFeeds.length; fi++) {
                     var f = allFeeds[fi];
                     var fv = (f.effect && f.effect.foodValue) ? f.effect.foodValue : 20;
-                    h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + fv + '点/个) 拥有:x' + f.count + '</option>';
+                    h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + fv + '点/个) 拥有:' + f.count + '</option>';
                 }
                 h += '</select>';
                 h += '<div class="flex-gap-4">';
