@@ -2448,9 +2448,9 @@
         // 辅助：生成内联样式字符串
         function S(obj) { var s = ''; for (var k in obj) s += k + ':' + obj[k] + ';'; return s; }
 
-        function calcRealTimeLeft(a) {
-            if (!a || a.count <= 0 || a.food <= 0) return 0;
-            var food = a.food, count = a.count, rate = a.foodPerHour, bt = a.breedTime, lb = a.lastBreed || Date.now(), now = Date.now(), h = 0;
+        function calcRealTimeLeft(cage) {
+            if (!cage.animal || cage.animal.count <= 0 || cage.food <= 0) return 0;
+            var food = cage.food, count = cage.animal.count, rate = cage.animal.foodPerHour, bt = cage.animal.breedTime, lb = cage.animal.lastBreed || Date.now(), now = Date.now(), h = 0;
             while (food > 0 && h < 8760) {
                 var c = count * rate;
                 if (food < c) return h + (food / c);
@@ -2460,6 +2460,7 @@
             }
             return h;
         }
+
         function formatHours(h) {
             if (h <= 0) return '0小时'; if (h < 1) return Math.floor(h * 60) + '分钟';
             var hh = Math.floor(h); if (hh > 24) { var d = Math.floor(hh / 24); return d + '天' + (hh % 24) + '小时'; } return hh + '小时';
@@ -2469,17 +2470,21 @@
             var h = '';
             for (var i = 0; i < cages.length; i++) {
                 var c = cages[i];
+                var starving = c.animal && c.food < 0;
+                h += '<div class="cage' + (starving ? ' starving' : (!c.animal ? ' empty' : '')) + '" onclick="clickCage(' + i + ')">';
+
                 if (c.animal) {
-                    var starving = c.animal.food < 0;
-                    h += '<div class="cage' + (starving ? ' starving' : '') + '" onclick="clickCage(' + i + ')">';
                     h += '<span class="cage-icon">' + (c.animal.icon || '🐾') + '</span>';
                     h += '<span class="cage-name">' + esc(c.animal.name) + '</span>';
                     h += '<span class="cage-count">数量: ' + c.animal.count + '</span>';
-                    h += '<span class="cage-food">' + (c.animal.food >= 0 ? '🍖' + Math.floor(c.animal.food) : '⚠️饥饿') + '</span>';
-                    h += '<span class="cage-status">消耗' + c.animal.foodPerHour + '/时</span></div>';
+                    h += '<span class="cage-food">' + (c.food >= 0 ? '🍖' + Math.floor(c.food) : '⚠️饥饿') + '</span>';
+                    h += '<span class="cage-status">消耗' + c.animal.foodPerHour + '/时</span>';
                 } else {
-                    h += '<div class="cage empty" onclick="clickCage(' + i + ')"><span class="cage-icon" style="opacity:0.3;">🟫</span><span class="cage-name" style="color:#4a5a4a;">空圈</span></div>';
+                    h += '<span class="cage-icon" style="opacity:0.3;">🟫</span>';
+                    h += '<span class="cage-name" style="color:#4a5a4a;">空圈</span>';
+                    h += '<span class="cage-food" style="margin-top:6px;color:#a5d6a7;">🍖存粮: ' + Math.floor(c.food || 0) + '</span>';
                 }
+                h += '</div>';
             }
             return h;
         }
@@ -2690,6 +2695,16 @@
                         showToast(msg.msg, false);
                     }
                     break;
+                case 'transfer_cage_food':
+                    if (ok) {
+                        addActionOk(msg.msg); showToast(msg.msg, true);
+                        if (msg.cages && playerData) playerData.cages = msg.cages;
+                        if (msg.items && playerData) playerData.items = msg.items;
+                        renderCages();
+                    } else {
+                        addActionFail(msg.msg); showToast(msg.msg, false);
+                    }
+                    break;
                 case 'my_cages': if (ok && playerData) { playerData.cages = msg.cages; playerData.animals = msg.animals; renderCages(); } break;
                 case 'visit_farm':
                     if (ok) {
@@ -2884,125 +2899,101 @@
 
             var cage = playerData.cages[cageId], h = '';
 
+            // 查背包内已搅拌饲料数量
+            var ufCount = 0;
+            if (playerData.items) {
+                var ufItem = playerData.items.find(i => i.id === 'universal_feed');
+                if (ufItem) ufCount = ufItem.count;
+            }
+
             if (!cage.animal) {
                 // === 空圈状态 ===
                 h += '<div class="text-center mb-12 text-13" style="color:#7a9a7a;">第' + (cageId + 1) + '个圈 · 空圈</div>';
+
                 if (!playerData.animals || playerData.animals.length === 0) {
                     h += '<div class="text-center p-12" style="color:#4a5a4a;">没有动物，去野外捕捉吧</div>';
                 } else {
-                    h += '<div class="text-12 mb-8" style="color:#5a7a5a;">选择动物放入：</div>';
-                    h += '<div class="flex-col-6">'; // 容器包裹
+                    h += '<div class="text-12 mb-8" style="color:#5a7a5a;">选择动物放入：</div><div class="flex-col-6">';
                     for (var i = 0; i < playerData.animals.length; i++) {
                         var a = playerData.animals[i];
-                        h += '<div class="glass flex-between p-8">';
-                        h += '  <span class="text-13">' + (a.icon || '🐾') + ' ' + esc(a.name) + ' <span class="text-muted">x' + a.count + '</span></span>';
-                        h += '  <div class="flex-gap-4">';
-                        h += '    <input type="number" id="placeCount_' + i + '" value="1" min="1" max="' + a.count + '" class="input-dark input-sm">';
-                        h += '    <button class="action-btn action-btn-solid-green" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + i + ')">放入</button>';
-                        h += '  </div>';
-                        h += '</div>';
+                        h += '<div class="glass flex-between p-8"><span class="text-13">' + (a.icon || '🐾') + ' ' + esc(a.name) + ' <span class="text-muted">x' + a.count + '</span></span>';
+                        h += '<div class="flex-gap-4"><input type="number" id="placeCount_' + i + '" value="1" min="1" max="' + a.count + '" class="input-dark input-sm"><button class="action-btn action-btn-solid-green" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + i + ')">放入</button></div></div>';
                     }
                     h += '</div>';
                 }
             } else {
                 // === 已有动物状态 ===
-                var a = cage.animal, starving = a.food < 0, foodStatus = a.food >= 0 ? Math.floor(a.food) : 0;
-                var realH = calcRealTimeLeft(a), timeStr = formatHours(realH);
+                var a = cage.animal, starving = cage.food < 0, foodStatus = cage.food >= 0 ? Math.floor(cage.food) : 0;
+                var realH = calcRealTimeLeft(cage), timeStr = formatHours(realH);
 
-                h += '<div class="text-center mb-12">';
-                h += '<div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
+                h += '<div class="text-center mb-12"><div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
                 h += '<div style="font-size:16px;color:#fcd34d;">' + esc(a.name) + '</div>';
                 h += '<div class="text-muted" style="margin-top:4px;">第' + (cageId + 1) + '个圈</div>';
                 h += '<div style="font-size:14px;color:#67e8f9;margin-top:6px;">数量: ' + a.count + ' 只</div>';
-
                 if (starving) {
                     h += '<div style="font-size:13px;color:#ef4444;margin-top:6px;">⚠️ 食物不足！动物正在死亡</div>';
                 } else {
                     h += '<div style="font-size:13px;color:#a5d6a7;margin-top:6px;">🍖 食物: ' + foodStatus + ' (预计还能撑 ' + timeStr + ')</div>';
                 }
-                h += '<div class="text-muted" style="margin-top:4px;">消耗: ' + a.foodPerHour + '/小时 | 售价: 💰' + a.sellPrice + '/只</div></div>';
+                h += '<div class="text-muted" style="margin-top:4px;">消耗: ' + a.foodPerHour + '/小时 | 售价: 💰' + a.sellPrice + '/只</div></div><div class="flex-col-6">';
 
-                h += '<div class="flex-col-6">';
-
-                // 1. 追加同种动物
                 var sa = (playerData.animals || []).filter(function (an) { return an.id === a.id; });
                 if (sa.length > 0) {
                     var s0 = sa[0], si = playerData.animals.indexOf(s0);
-                    h += '<div class="glass p-8" style="margin-bottom:4px;">';
-                    h += '  <div class="text-12" style="color:#67e8f9;margin-bottom:4px;">➕ 追加同种（库存 ' + s0.count + '）：</div>';
-                    h += '  <div class="flex-gap-4">';
-                    h += '    <input type="number" id="addMoreCount" value="1" min="1" max="' + s0.count + '" class="input-dark input-num">';
-                    h += '    <button class="action-btn action-btn-cyan" style="flex:1;" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + si + ',true)">追加</button>';
-                    h += '    <button class="action-btn action-btn-cyan" onclick="doPlaceAnimalAll(' + cageId + ',\'' + a.id + '\',' + s0.count + ')">全部</button>';
-                    h += '  </div>';
-                    h += '</div>';
+                    h += '<div class="glass p-8" style="margin-bottom:4px;"><div class="text-12" style="color:#67e8f9;margin-bottom:4px;">➕ 追加同种（库存 ' + s0.count + '）：</div><div class="flex-gap-4"><input type="number" id="addMoreCount" value="1" min="1" max="' + s0.count + '" class="input-dark input-num"><button class="action-btn action-btn-cyan" style="flex:1;" onclick="doPlaceAnimal(' + cageId + ',\'' + a.id + '\',' + si + ',true)">追加</button><button class="action-btn action-btn-cyan" onclick="doPlaceAnimalAll(' + cageId + ',\'' + a.id + '\',' + s0.count + ')">全部</button></div></div>';
                 }
 
-                // 2. 喂食区域
-                h += '<div class="glass p-8">';
-                h += '<div class="text-12 mb-6" style="color:#5a7a5a;">喂食：</div>';
+                h += '<div class="glass p-8"><div class="text-12 mb-6" style="color:#5a7a5a;">喂食：</div>';
                 var hasFood = false;
-
-                // 饲料
-                var feeds = (playerData.items || []).filter(function (it) { return it.type === 'feed'; });
+                var feeds = (playerData.items || []).filter(function (it) { return it.type === 'feed' && !it.unsalable; });
                 if (feeds.length > 0) {
                     hasFood = true;
-                    h += '<div class="mb-6">';
-                    h += '<select id="feedFeedSelect" class="input-dark w-full mb-6">';
+                    h += '<div class="mb-6"><select id="feedFeedSelect" class="input-dark w-full mb-6">';
                     for (var fi = 0; fi < feeds.length; fi++) {
                         var f = feeds[fi];
                         h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + ((f.effect && f.effect.foodValue) ? f.effect.foodValue : 20) + ') x' + f.count + '</option>';
                     }
-                    h += '</select>';
-                    h += '<div class="flex-gap-4">';
-                    h += '  <input type="number" id="feedFeedCount" value="1" min="1" class="input-dark input-num">';
-                    h += '  <button class="action-btn action-btn-pink" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'feed\')">✨ 喂饲料</button>';
-                    h += '</div></div>';
+                    h += '</select><div class="flex-gap-4"><input type="number" id="feedFeedCount" value="1" min="1" class="input-dark input-num"><button class="action-btn action-btn-pink" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'feed\')">✨ 喂饲料</button></div></div>';
                 }
 
-                // 种子
                 if (playerData.seeds && playerData.seeds.length > 0) {
                     hasFood = true;
-                    h += '<div class="mb-6">';
-                    h += '<select id="feedSeedSelect" class="input-dark w-full mb-6">';
+                    h += '<div class="mb-6"><select id="feedSeedSelect" class="input-dark w-full mb-6">';
                     for (var si2 = 0; si2 < playerData.seeds.length; si2++) { var s = playerData.seeds[si2]; h += '<option value="' + s.id + '">🌱 ' + esc(s.name) + ' (x' + s.count + ')</option>'; }
-                    h += '</select>';
-                    h += '<div class="flex-gap-4">';
-                    h += '  <input type="number" id="feedSeedCount" value="1" min="1" class="input-dark input-num">';
-                    h += '  <button class="action-btn action-btn-green" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'seed\')">喂种子(+1)</button>';
-                    h += '</div></div>';
+                    h += '</select><div class="flex-gap-4"><input type="number" id="feedSeedCount" value="1" min="1" class="input-dark input-num"><button class="action-btn action-btn-green" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'seed\')">喂种子(+1)</button></div></div>';
                 }
 
-                // 果实
                 if (playerData.fruits && playerData.fruits.length > 0) {
                     hasFood = true;
-                    h += '<div class="mb-6">';
-                    h += '<select id="feedFruitSelect" class="input-dark w-full mb-6">';
+                    h += '<div class="mb-6"><select id="feedFruitSelect" class="input-dark w-full mb-6">';
                     for (var fi2 = 0; fi2 < playerData.fruits.length; fi2++) { var f2 = playerData.fruits[fi2]; h += '<option value="' + f2.id + '">🍎 ' + esc(f2.name) + ' (x' + f2.count + ')</option>'; }
-                    h += '</select>';
-                    h += '<div class="flex-gap-4">';
-                    h += '  <input type="number" id="feedFruitCount" value="1" min="1" class="input-dark input-num">';
-                    h += '  <button class="action-btn action-btn-gold" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'fruit\')">喂果实(+5)</button>';
-                    h += '</div></div>';
+                    h += '</select><div class="flex-gap-4"><input type="number" id="feedFruitCount" value="1" min="1" class="input-dark input-num"><button class="action-btn action-btn-gold" style="flex:1;" onclick="doFeedAnimal(' + cageId + ',\'fruit\')">喂果实(+5)</button></div></div>';
                 }
-
                 if (!hasFood) h += '<div class="text-11 text-center p-10" style="color:#3a4a3a;">没有食物</div>';
-                h += '</div>'; // end glass
+                h += '</div>';
 
-                // 3. 出售区域
-                h += '<div class="glass p-8" style="border-color:rgba(239,68,68,0.2);">';
-                h += '<div class="text-12 mb-6" style="color:#5a7a5a;">出售动物：</div>';
-                h += '<div class="flex-gap-4">';
-                h += '  <input type="number" id="sellAnimalCount" value="1" min="1" max="' + a.count + '" class="input-dark input-num">';
-                h += '  <button class="action-btn action-btn-gold" style="flex:1;" onclick="doSellAnimal(' + cageId + ',false)">卖出</button>';
-                h += '  <button class="action-btn action-btn-red" onclick="doSellAnimal(' + cageId + ',true)">全卖</button>';
-                h += '</div></div>';
-
-                h += '</div>'; // end flex-col-6
+                h += '<div class="glass p-8" style="border-color:rgba(239,68,68,0.2);"><div class="text-12 mb-6" style="color:#5a7a5a;">出售动物：</div><div class="flex-gap-4"><input type="number" id="sellAnimalCount" value="1" min="1" max="' + a.count + '" class="input-dark input-num"><button class="action-btn action-btn-gold" style="flex:1;" onclick="doSellAnimal(' + cageId + ',false)">卖出</button><button class="action-btn action-btn-red" onclick="doSellAnimal(' + cageId + ',true)">全卖</button></div></div></div>';
             }
+
+            // 已搅拌饲料存取UI (不论是否有动物都显示)
+            h += '<div class="glass p-8" style="margin-top:8px; border-color:rgba(106,191,105,0.3);">';
+            h += '<div class="text-12 mb-6" style="color:#a5d6a7;">🌿 饲料槽 (已搅拌饲料)</div>';
+            h += '<div class="text-11 text-muted mb-6">槽内当前存粮: ' + Math.floor(cage.food || 0) + ' | 你的背包: ' + ufCount + ' 个</div>';
+            h += '<div class="flex-gap-4">';
+            h += '<input type="number" id="ufActionCount" value="1" min="1" class="input-dark input-num">';
+            h += '<button class="action-btn action-btn-solid-green" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'deposit\')">存入</button>';
+            h += '<button class="action-btn action-btn-dark" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'withdraw\')">取出</button>';
+            h += '</div></div>';
 
             document.getElementById('cageActionContent').innerHTML = h;
             openPanel('panelCageAction');
+        }
+
+        // 补充辅助调用函数 (放在 clickCage 同级即可)
+        function doTransferCageFood(cageId, transferType) {
+            var val = document.getElementById('ufActionCount').value;
+            doAction('transfer_cage_food', { cageId: cageId, transferType: transferType, amount: parseInt(val) || 1 });
+            closePanel('panelCageAction');
         }
 
         function doFeedFriendAnimal(farmId, cageId, feedType) {
@@ -3536,7 +3527,9 @@
             else { for (var ai = 0; ai < an.length; ai++) { var a = an[ai]; h += '<div class="sell-item"><div class="sl-info"><div class="sl-name">' + (a.icon || '🐾') + ' ' + esc(a.name) + '</div><div class="sl-detail">数量: ' + a.count + ' · 单价: 💰' + a.sellPrice + '</div></div>' + sellBtns('doSellStockAnimal', a.id, a.count) + '</div>'; } }
             // 道具
             h += '<div class="text-12" style="color:#67e8f9;margin:12px 0 6px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;">🎁 装饰与道具</div>';
-            var si = (playerData.items || []).filter(function (it) { return it.type === 'decoration' || it.type === 'feed' || it.type === 'fertilizer' || it.type === 'tool'; });
+            var si = (playerData.items || []).filter(function (it) {
+                return !it.unsalable && (it.type === 'decoration' || it.type === 'feed' || it.type === 'fertilizer' || it.type === 'tool');
+            });
             if (si.length === 0) h += '<div class="text-muted p-8">没有可卖出的物品</div>';
             else {
                 for (var k = 0; k < si.length; k++) {
