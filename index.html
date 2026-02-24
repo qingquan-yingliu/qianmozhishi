@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.10</h1>
+            <h1>🌾 阡陌之诗 v1.9.11</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -2625,9 +2625,9 @@
                     if (!visitingOwner) renderCages(); break;
                 case 'inventory':
                     if (ok) { playerData.seeds = msg.seeds; playerData.fruits = msg.fruits; playerData.items = msg.items; playerData.money = msg.money; renderInventoryPanel(msg.seeds, msg.fruits, msg.items, msg.money); if (window._pendingSellRender) { window._pendingSellRender = false; renderSellPanel(); } } break;
-                case 'shop_list': if (ok) renderShopPanel(msg.shop, msg.money); break;
+                case 'shop_list': if (ok) { renderShopPanel(msg.shop, msg.money); if (window._shopScrollRestore !== undefined) { var box = document.querySelector('#panelShop .panel-box'); if (box) box.scrollTop = window._shopScrollRestore; window._shopScrollRestore = undefined; } } break;
                 case 'shop_buy':
-                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); if (msg.money !== undefined && playerData) playerData.money = msg.money; if (msg.waterBoostLevel !== undefined && playerData) playerData.waterBoostLevel = msg.waterBoostLevel; if (msg.seeds && playerData) playerData.seeds = msg.seeds; if (msg.items && playerData) playerData.items = msg.items; if (msg.plots && playerData) { playerData.plots = msg.plots; renderPlots(); } if (msg.cages && playerData) { playerData.cages = msg.cages; renderCages(); } if (msg.animals && playerData) playerData.animals = msg.animals; setTimeout(function () { doAction('shop_list'); }, 150); }
+                    if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); if (msg.money !== undefined && playerData) playerData.money = msg.money; if (msg.waterBoostLevel !== undefined && playerData) playerData.waterBoostLevel = msg.waterBoostLevel; if (msg.seeds && playerData) playerData.seeds = msg.seeds; if (msg.items && playerData) playerData.items = msg.items; if (msg.plots && playerData) { playerData.plots = msg.plots; renderPlots(); } if (msg.cages && playerData) { playerData.cages = msg.cages; renderCages(); } if (msg.animals && playerData) playerData.animals = msg.animals; setTimeout(function () { var box = document.querySelector('#panelShop .panel-box'); var st = box ? box.scrollTop : 0; doAction('shop_list'); window._shopScrollRestore = st; }, 150); }
                     else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
                 case 'sell_fruit': if (ok) { showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
                 case 'sell_seed': if (ok) { addActionOk(msg.msg); showToast(msg.msg, true); openSell(); } else { addActionFail(msg.msg); showToast(msg.msg, false); } break;
@@ -3378,7 +3378,10 @@
         }
 
         // 物品栏
-        function openInventory() { document.getElementById('inventoryContent').innerHTML = loadingPlaceholder(); openPanel('panelInv'); doAction('inventory'); }
+        function openInventory() { 
+            document.getElementById('inContent').innerHTML = loadingPlaceholder(); 
+            openPanel('panelInv'); 
+            doAction('inventory'); }
         function renderInventoryPanel(seeds, fruits, items, money) {
             var h = '<div class="text-13 text-gold mb-12">💰 金币: ' + money + '</div>';
             h += '<div class="inv-section"><div class="inv-section-title">🌱 种子</div><div class="inv-grid">';
