@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.20</h1>
+            <h1>🌾 阡陌之诗 v1.10</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -4135,16 +4135,21 @@
             document.getElementById('settingsContent').innerHTML = h;
         }
         function openTitleSelect() { renderTitleSelectPanel(); openPanel('panelTitleSelect'); }
-        function renderTitleSelectPanel() {
+         function renderTitleSelectPanel() {
             var h = '';
             if (!playerData || !playerData.titles || playerData.titles.length === 0) h += '<div class="text-center p-12" style="color:#5a7a5a;">你还没有获得任何称号</div>';
             else {
                 for (var i = 0; i < playerData.titles.length; i++) {
                     var t = playerData.titles[i], isA = playerData.activeTitle && playerData.activeTitle.titleId === t.titleId;
                     h += '<div class="glass flex-between p-8 mb-6" style="border-color:' + (isA ? 'rgba(76,175,80,0.25)' : 'rgba(255,255,255,0.04)') + ';background:' + (isA ? 'rgba(76,175,80,0.06)' : 'transparent') + ';">';
-                    h += '<span style="color:' + t.color + ';">[' + esc(t.name) + ']</span>';
-                    if (isA) h += '<button class="action-btn action-btn-red" style="padding:4px 10px;font-size:11px;" onclick="setActiveTitle(null)">取消使用</button>';
-                    else h += '<button class="btn-td btn-green" style="padding:4px 10px;font-size:11px;" onclick="setActiveTitle(\'' + t.titleId + '\')">使用</button>';
+                    h += '<div style="flex:1;">';
+                    h += '<div style="color:' + t.color + ';font-weight:600;font-size:14px;">[' + esc(t.name) + ']</div>';
+                    if (t.desc) {
+                        h += '<div style="font-size:11px;color:#888;margin-top:4px;line-height:1.4;">' + esc(t.desc) + '</div>';
+                    }
+                    h += '</div>';
+                    if (isA) h += '<button class="action-btn action-btn-red" style="padding:6px 12px;font-size:11px;flex-shrink:0;margin-left:8px;" onclick="setActiveTitle(null)">取消使用</button>';
+                    else h += '<button class="btn-td btn-green" style="padding:6px 12px;font-size:11px;flex-shrink:0;margin-left:8px;" onclick="setActiveTitle(\'' + t.titleId + '\')">使用</button>';
                     h += '</div>';
                 }
             }
