@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.12</h1>
+            <h1>🌾 阡陌之诗 v1.9.14</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -2450,15 +2450,44 @@
 
         function calcRealTimeLeft(cage) {
             if (!cage.animal || cage.animal.count <= 0 || cage.food <= 0) return 0;
-            var food = cage.food, count = cage.animal.count, rate = cage.animal.foodPerHour, bt = cage.animal.breedTime, lb = cage.animal.lastBreed || Date.now(), now = Date.now(), h = 0;
-            while (food > 0 && h < 8760) {
-                var c = count * rate;
-                if (food < c) return h + (food / c);
-                food -= c; h++;
-                var st = now + (h * 3600000);
-                if (count >= 2 && (st - lb) >= bt) { var nc = Math.min(1024, count * 2); if (nc > count) { count = nc; lb = st; } }
+
+            var food = cage.food;
+            var count = cage.animal.count;
+            var foodRate = cage.animal.foodPerHour;
+            var breedTime = cage.animal.breedTime;
+            var lastBreed = cage.animal.lastBreed || Date.now();
+            var breedCount = cage.animal.breedCount || 0; // 当前生育次数
+            var now = Date.now();
+
+            // 必须和后端的配置保持完全一致
+            var MAX_BREED_TIMES = 10;
+            var CAGE_CAPACITY = 1024;
+            var BABIES_PER_CYCLE = 2;
+
+            var hours = 0;
+            // 限制最大推演次数，防止极端数据卡死循环 (5000小时 ≈ 208天)
+            while (food > 0 && hours < 5000) {
+                var currentConsumption = count * foodRate;
+
+                // 如果剩下的食物不够吃完整整1小时，计算小数(满算)并返回
+                if (food < currentConsumption) {
+                    return hours + (food / currentConsumption);
+                }
+
+                food -= currentConsumption;
+                hours++;
+
+                // 模拟推演时间线，看看这个小时里有没有触发繁殖
+                var simTime = now + (hours * 3600000);
+                if (count >= 2 && breedCount < MAX_BREED_TIMES && count < CAGE_CAPACITY) {
+                    if ((simTime - lastBreed) >= breedTime) {
+                        count = Math.min(CAGE_CAPACITY, count + BABIES_PER_CYCLE);
+                        lastBreed = simTime;
+                        breedCount++; // 模拟一次生育
+                    }
+                }
             }
-            return h;
+            return hours;
         }
 
         function formatHours(h) {
@@ -2899,13 +2928,6 @@
 
             var cage = playerData.cages[cageId], h = '';
 
-            // 查背包内已搅拌饲料数量
-            var ufCount = 0;
-            if (playerData.items) {
-                var ufItem = playerData.items.find(i => i.id === 'universal_feed');
-                if (ufItem) ufCount = ufItem.count;
-            }
-
             if (!cage.animal) {
                 // === 空圈状态 ===
                 h += '<div class="text-center mb-12 text-13" style="color:#7a9a7a;">第' + (cageId + 1) + '个圈 · 空圈</div>';
@@ -2926,10 +2948,25 @@
                 var a = cage.animal, starving = cage.food < 0, foodStatus = cage.food >= 0 ? Math.floor(cage.food) : 0;
                 var realH = calcRealTimeLeft(cage), timeStr = formatHours(realH);
 
+                // 计算并显示繁衍状态
+                var breedCount = a.breedCount || 0;
+                var breedStatusStr = '';
+                if (a.count < 2) {
+                    breedStatusStr = '<span style="color:#888;">(数量不足无法繁殖)</span>';
+                } else if (breedCount >= 10) {
+                    breedStatusStr = '<span style="color:#ef4444;font-weight:bold;">(已绝育)</span>';
+                } else {
+                    breedStatusStr = '<span style="color:#a5d6a7;">(已生育 ' + breedCount + '/10 次)</span>';
+                }
+
                 h += '<div class="text-center mb-12"><div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
                 h += '<div style="font-size:16px;color:#fcd34d;">' + esc(a.name) + '</div>';
                 h += '<div class="text-muted" style="margin-top:4px;">第' + (cageId + 1) + '个圈</div>';
-                h += '<div style="font-size:14px;color:#67e8f9;margin-top:6px;">数量: ' + a.count + ' 只</div>';
+
+                h += '<div class="text-center mb-12"><div style="font-size:36px;margin-bottom:6px;">' + (a.icon || '🐾') + '</div>';
+                h += '<div style="font-size:16px;color:#fcd34d;">' + esc(a.name) + '</div>';
+                h += '<div class="text-muted" style="margin-top:4px;">第' + (cageId + 1) + '个圈</div>';
+                h += '<div style="font-size:14px;color:#67e8f9;margin-top:6px;">数量: ' + a.count + ' 只 ' + breedStatusStr + '</div>';
                 if (starving) {
                     h += '<div style="font-size:13px;color:#ef4444;margin-top:6px;">⚠️ 食物不足！动物正在死亡</div>';
                 } else {
@@ -2975,15 +3012,41 @@
                 h += '<div class="glass p-8" style="border-color:rgba(239,68,68,0.2);"><div class="text-12 mb-6" style="color:#5a7a5a;">出售动物：</div><div class="flex-gap-4"><input type="number" id="sellAnimalCount" value="1" min="1" max="' + a.count + '" class="input-dark input-num"><button class="action-btn action-btn-gold" style="flex:1;" onclick="doSellAnimal(' + cageId + ',false)">卖出</button><button class="action-btn action-btn-red" onclick="doSellAnimal(' + cageId + ',true)">全卖</button></div></div></div>';
             }
 
-            // 已搅拌饲料存取UI (不论是否有动物都显示)
+            // == 饲料槽存取UI (动态读取所有饲料) ==
+            var allFeeds = (playerData.items || []).filter(function (it) { return it.type === 'feed' && !it.unsalable; });
+            // 补充查找已搅拌饲料(它是unsalable的)
+            var ufItem = (playerData.items || []).find(function (it) { return it.id === 'universal_feed'; });
+            if (ufItem) allFeeds.unshift(ufItem); // 放到列表第一位
+
             h += '<div class="glass p-8" style="margin-top:8px; border-color:rgba(106,191,105,0.3);">';
-            h += '<div class="text-12 mb-6" style="color:#a5d6a7;">🌿 饲料槽 (已搅拌饲料)</div>';
-            h += '<div class="text-11 text-muted mb-6">槽内当前存粮: ' + Math.floor(cage.food || 0) + ' | 你的背包: ' + ufCount + ' 个</div>';
+            h += '<div class="text-12 mb-6" style="color:#a5d6a7;">🌿 饲料槽</div>';
+            h += '<div class="text-11 text-muted mb-6">槽内当前存粮: ' + Math.floor(cage.food || 0) + ' 点</div>';
+
+            // 存入区域
+            if (allFeeds.length > 0) {
+                h += '<div class="mb-6"><select id="troughDepositSelect" class="input-dark w-full mb-6">';
+                for (var fi = 0; fi < allFeeds.length; fi++) {
+                    var f = allFeeds[fi];
+                    var fv = (f.effect && f.effect.foodValue) ? f.effect.foodValue : 20;
+                    h += '<option value="' + f.id + '">' + (f.icon || '🥡') + ' ' + esc(f.name) + ' (+' + fv + '点/个) 拥有:x' + f.count + '</option>';
+                }
+                h += '</select>';
+                h += '<div class="flex-gap-4">';
+                h += '<input type="number" id="troughDepositCount" value="1" min="1" class="input-dark input-num">';
+                h += '<button class="action-btn action-btn-solid-green" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'deposit\')">存入所选饲料</button>';
+                h += '</div></div>';
+            } else {
+                h += '<div class="text-11 text-muted mb-6">背包中没有饲料可存入。</div>';
+            }
+
+            // 取出区域 (固定取出为已搅拌饲料，1点=1个)
+            h += '<div style="border-top:1px solid rgba(106,191,105,0.15); margin-top:8px; padding-top:8px;">';
+            h += '<div class="text-11 text-muted mb-6" style="color:#7a9a7a;">将存粮打包为「已搅拌饲料」(1点=1个)取出：</div>';
             h += '<div class="flex-gap-4">';
-            h += '<input type="number" id="ufActionCount" value="1" min="1" class="input-dark input-num">';
-            h += '<button class="action-btn action-btn-solid-green" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'deposit\')">存入</button>';
-            h += '<button class="action-btn action-btn-dark" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'withdraw\')">取出</button>';
+            h += '<input type="number" id="troughWithdrawCount" value="1" min="1" class="input-dark input-num">';
+            h += '<button class="action-btn action-btn-dark" style="flex:1;" onclick="doTransferCageFood(' + cageId + ',\'withdraw\')">取出存粮</button>';
             h += '</div></div>';
+            h += '</div>';
 
             document.getElementById('cageActionContent').innerHTML = h;
             openPanel('panelCageAction');
@@ -2991,8 +3054,26 @@
 
         // 补充辅助调用函数 (放在 clickCage 同级即可)
         function doTransferCageFood(cageId, transferType) {
-            var val = document.getElementById('ufActionCount').value;
-            doAction('transfer_cage_food', { cageId: cageId, transferType: transferType, amount: parseInt(val) || 1 });
+            var amount = 1;
+            var itemId = null;
+
+            if (transferType === 'deposit') {
+                var countInput = document.getElementById('troughDepositCount');
+                var sel = document.getElementById('troughDepositSelect');
+                if (!sel || !sel.value) return; // 没有饲料
+                itemId = sel.value;
+                amount = parseInt(countInput.value) || 1;
+            } else if (transferType === 'withdraw') {
+                var countInput = document.getElementById('troughWithdrawCount');
+                amount = parseInt(countInput.value) || 1;
+            }
+
+            doAction('transfer_cage_food', {
+                cageId: cageId,
+                transferType: transferType,
+                amount: amount,
+                itemId: itemId
+            });
             closePanel('panelCageAction');
         }
 
