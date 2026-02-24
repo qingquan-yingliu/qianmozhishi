@@ -2163,7 +2163,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.9.17</h1>
+            <h1>🌾 阡陌之诗 v1.9.19</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -3886,7 +3886,10 @@
             document.getElementById('petsContent').innerHTML = h;
         }
         function openPetDetail(pid) {
-            if (!playerData || !playerData.pets) return; var pet = playerData.pets.find(function (p) { return p.id === pid; }); if (!pet) return;
+            if (!playerData || !playerData.pets) return; 
+            var pet = playerData.pets.find(function (p) { return p.id === pid; }); 
+            if (!pet) return;
+            closePanel('panelPets');
             var now = Date.now(), onAdv = pet.adventureEndTime && now < pet.adventureEndTime, advReady = pet.adventureEndTime && now >= pet.adventureEndTime;
             var h = '<div class="text-center mb-12"><div style="font-size:48px;margin-bottom:6px;">' + (pet.speciesIcon || '🐾') + '</div>';
             h += '<div style="font-size:18px;color:#c4b5fd;font-weight:600;">' + esc(pet.name) + '</div>';
@@ -3896,20 +3899,41 @@
             h += '<div class="glass text-center p-10"><div class="text-muted">价值</div><div style="font-size:14px;color:#fcd34d;margin-top:2px;">💰' + (pet.value || 0) + '</div></div>';
             h += '<div class="glass text-center p-10"><div class="text-muted">探险次数</div><div style="font-size:14px;color:#67e8f9;margin-top:2px;">🗺️ ' + (pet.totalAdventures || 0) + '</div></div>';
             h += '<div class="glass text-center p-10"><div class="text-muted">获得时间</div><div class="text-11" style="color:#7a9a7a;margin-top:4px;">' + new Date(pet.createdAt).toLocaleDateString() + '</div></div></div>';
-            h += '<div class="flex-col-6">';
+            h += '<div class="flex-col-6">';            
             if (advReady) h += '<button class="action-btn action-btn-solid-green w-full" style="padding:12px;font-size:14px;" onclick="doPetCollect(\'' + pet.id + '\')">🎁 领取寻宝奖励</button>';
             else if (onAdv) { var rm2 = Math.ceil((pet.adventureEndTime - now) / 60000); h += '<div class="glass text-center p-12 text-13 text-gold">🗺️ 寻宝中... 还需' + rm2 + '分钟</div>'; }
-            else h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doPetAdventure(\'' + pet.id + '\')">🗺️ 派出寻宝（15分钟）</button>';
+            else h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doPetAdventure(\'' + pet.id + '\')">🗺️ 派出寻宝（15分钟）</button>';            
             h += '<button class="action-btn action-btn-purple w-full" style="padding:10px;" onclick="doPetInteract(\'' + pet.id + '\')">❤️ 互动（心情+15）</button>';
             h += '<button class="action-btn action-btn-cyan w-full" style="padding:10px;" onclick="doPetRename(\'' + pet.id + '\')">✏️ 改名</button>';
-            h += '<button class="action-btn action-btn-red w-full" style="padding:10px;" onclick="doPetRelease(\'' + pet.id + '\')">🕊️ 放生（回收一半价值）</button></div>';
-            document.getElementById('petDetailContent').innerHTML = h; openPanel('panelPetDetail');
+            h += '<button class="action-btn action-btn-red w-full" style="padding:10px;" onclick="doPetRelease(\'' + pet.id + '\')">🕊️ 放生（回收一半价值）</button>';
+            h += '<button class="action-btn w-full" style="padding:10px; background:rgba(255,255,255,0.05); color:#aaa; margin-top:8px; border:1px solid rgba(255,255,255,0.1);" onclick="closePanel(\'panelPetDetail\'); openPets();">🔙 返回我的宠物</button></div>';
+            document.getElementById('petDetailContent').innerHTML = h; 
+            openPanel('panelPetDetail');
+            var closeBtn = document.querySelector('#panelPetDetail .panel-close');
+            if (closeBtn) {
+                closeBtn.onclick = function() {
+                    closePanel('panelPetDetail');
+                    openPets();
+                };
+            }
         }
+
         function doPetAdventure(id) { doAction('pet_adventure', { petId: id }); }
         function doPetCollect(id) { doAction('pet_collect', { petId: id }); }
         function doPetInteract(id) { doAction('pet_interact', { petId: id }); }
-        function doPetRename(id) { var n = prompt('给宠物起个新名字（1-12字）：'); if (!n || !n.trim()) return; doAction('rename_pet', { petId: id, name: n.trim() }); closePanel('panelPetDetail'); }
-        function doPetRelease(id) { if (!confirm('确定放生这只宠物？将获得一半价值的金币。')) return; doAction('release_pet', { petId: id }); closePanel('panelPetDetail'); }
+        function doPetRename(id) { 
+            var n = prompt('给宠物起个新名字（1-12字）：'); 
+            if (!n || !n.trim()) return; 
+            doAction('rename_pet', { petId: id, name: n.trim() }); 
+            closePanel('panelPetDetail'); 
+            openPets(); 
+        }
+        function doPetRelease(id) { 
+            if (!confirm('确定放生这只宠物？将获得一半价值的金币。')) return; 
+            doAction('release_pet', { petId: id }); 
+            closePanel('panelPetDetail'); 
+            openPets(); 
+        }
 
         // 邮件
         function openMail() { document.getElementById('mailContent').innerHTML = loadingPlaceholder(); openPanel('panelMail'); doAction('mail_list'); openPanel('panelMail'); }
