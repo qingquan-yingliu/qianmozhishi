@@ -1917,7 +1917,35 @@
             border-bottom: none;
         }
 
-        /* ===== 通用辅助类 ===== */
+        /*装饰品拖拽相关*/
+        .decoration-item {
+            /* 防止长按弹出系统菜单或选中文本 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .decoration-item.dragging {
+            opacity: 0.3;
+            transform: scale(0.95);
+        }
+
+        .decoration-ghost {
+            position: fixed;
+            pointer-events: none;
+            /* 关键：让鼠标穿透幽灵元素，才能检测下方元素 */
+            z-index: 9999;
+            background: rgba(167, 139, 250, 0.15);
+            border: 1px solid rgba(167, 139, 250, 0.4);
+            border-radius: 10px;
+            padding: 6px 10px;
+            backdrop-filter: blur(4px);
+            text-align: center;
+            transform: scale(1.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 通用辅助类  */
         .glass {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.06);
@@ -2126,6 +2154,56 @@
             text-align: center;
         }
 
+        /* ===== 设置开关 Switch ===== */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #aaa;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-color: #4caf50;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(18px);
+            background-color: #4caf50;
+        }
+
         /* 滚动条美化 */
         ::-webkit-scrollbar {
             width: 4px;
@@ -2163,7 +2241,7 @@
 
     <div class="page login-page active" id="loginPage">
         <div class="login-box">
-            <h1>🌾 阡陌之诗 v1.11</h1>
+            <h1>🌾 阡陌之诗 v1.11.1</h1>
             <div class="subtitle">种地 · 采集 · 交友 · 交易</div>
             <div class="form-group"><label>你的昵称</label><input type="text" id="loginUser" placeholder="2-16个字符"
                     maxlength="16"></div>
@@ -2486,6 +2564,15 @@
             return hours;
         }
 
+        function getItemRarityColor(r) {
+            var m = { 'common': '#a5d6a7', 'uncommon': '#67e8f9', 'rare': '#c4b5fd', 'epic': '#fcd34d', 'legendary': '#f87171' };
+            return m[r] || '#a5d6a7';
+        }
+        function getItemRarityText(r) {
+            var m = { 'common': '普通', 'uncommon': '优秀', 'rare': '稀有', 'epic': '史诗', 'legendary': '传说' };
+            return m[r] || '普通';
+        }
+
         function formatHours(h) {
             if (h <= 0) return '0小时'; if (h < 1) return Math.floor(h * 60) + '分钟';
             var hh = Math.floor(h); if (hh > 24) { var d = Math.floor(hh / 24); return d + '天' + (hh % 24) + '小时'; } return hh + '小时';
@@ -2799,6 +2886,23 @@
                 case 'remove_decoration': if (msg.ok) { addActionOk(msg.msg); if (msg.decorations) playerData.decorations = msg.decorations; renderDecorationsArea(playerData.decorations, false); if (document.getElementById('panelDecorations').classList.contains('show')) renderDecorationsPanel(); } else addActionFail(msg.msg); break;
                 case 'cage_detail': if (msg.ok && msg.html) { document.getElementById('cageActionContent').innerHTML = msg.html; openPanel('panelCageAction'); window._currentFriendFarmId = msg.farmId; window._currentFriendCageId = msg.cageId; } else addActionFail(msg.msg || '无法获取圈养区详情'); break;
                 case 'weekly_ranking': if (ok) renderWeeklyRankingPanel(msg.ranking, msg.myRank); break;
+                case 'move_decoration':
+                    if (ok) {
+                        if (msg.decorations) {
+                            playerData.decorations = msg.decorations;
+                            renderDecorationsArea(playerData.decorations, false);
+                        }
+                    } else {
+                        addActionFail(msg.msg);
+                    }
+                    break;
+                case 'update_settings':
+                    if (ok) {
+                        if (msg.settings && playerData) {
+                            playerData.settings = msg.settings;
+                        }
+                    }
+                    break;
                 default: if (msg.msg) { if (ok) addActionOk(msg.msg); else addActionFail(msg.msg); }
             }
         }
@@ -2916,11 +3020,14 @@
             var h = '';
             for (var i = 0; i < decorations.length; i++) {
                 var d = decorations[i];
-                h += '<div class="decoration-item"><div class="d-icon">' + (d.icon || '🎨') + '</div><div class="d-name">' + esc(d.name || '未知装饰') + '</div>';
+                h += '<div class="decoration-item" data-index="' + i + '"><div class="d-icon">' + (d.icon || '🎨') + '</div><div class="d-name">' + esc(d.name || '未知装饰') + '</div>';
                 if (!isVisiting) h += '<div class="decoration-remove-btn" onclick="removeDecoration(\'' + d.id + '\')">×</div>';
                 h += '</div>';
             }
             grid.innerHTML = h;
+            if (!isVisiting) {
+                initDecorationDrag();
+            }
         }
 
         function clickCage(cageId) {
@@ -2976,7 +3083,8 @@
                     h += '<div style="font-size:13px;color:#a5d6a7;margin-top:6px;">🍖 食物: ' + foodStatus + ' (预计还能撑 ' + timeStr + ')</div>';
                 }
 
-                h += '<div class="text-muted" style="margin-top:4px;">总消耗: ' + totalConsume + '/小时 (单只' + a.foodPerHour + ') | 售价: 💰' + a.sellPrice + '/只</div></div><div class="flex-col-6">';
+                var breedTimeStr = a.breedTime >= 3600000 ? (Math.round(a.breedTime / 3600000 * 10) / 10 + '小时') : (Math.round(a.breedTime / 60000) + '分钟');
+                h += '<div class="text-muted" style="margin-top:4px;">总消耗: ' + totalConsume + '/小时 (单只' + a.foodPerHour + ') | 售价: 💰' + a.sellPrice + '/只<br>繁殖周期: <span style="color:#a5d6a7;">' + breedTimeStr + '</span></div></div><div class="flex-col-6">';
 
                 var sa = (playerData.animals || []).filter(function (an) { return an.id === a.id; });
                 if (sa.length > 0) {
@@ -3223,24 +3331,138 @@
             h += '<div class="mb-12"><div class="text-12 text-green mb-6">🏡 已放置的装饰</div>';
             if (playerData.decorations && playerData.decorations.length > 0) {
                 h += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-                for (var i = 0; i < playerData.decorations.length; i++) { var d = playerData.decorations[i]; h += '<div class="glass text-center p-8"><div style="font-size:24px;">' + (d.icon || '🎨') + '</div><div class="text-11" style="color:#aaa;">' + esc(d.name) + '</div><button class="action-btn action-btn-red" style="margin-top:4px;padding:2px 8px;font-size:10px;" onclick="removeDecoration(\'' + d.id + '\')">收起</button></div>'; }
+                for (var i = 0; i < playerData.decorations.length; i++) {
+                    var d = playerData.decorations[i];
+                    // 尝试从背包找品质
+                    var invItem = (playerData.items || []).find(function (it) { return it.id === d.id; });
+                    var color = invItem ? getItemRarityColor(invItem.rarity) : '#aaa';
+                    h += '<div class="glass text-center p-8"><div style="font-size:24px;">' + (d.icon || '🎨') + '</div><div class="text-11" style="color:' + color + ';">' + esc(d.name) + '</div><button class="action-btn action-btn-red" style="margin-top:4px;padding:2px 8px;font-size:10px;" onclick="removeDecoration(\'' + d.id + '\')">收起</button></div>';
+                }
                 h += '</div>';
             } else h += '<div class="text-muted p-8">还没有放置装饰物</div>';
+
             h += '</div><div class="mb-12"><div class="text-12 text-gold mb-6">📦 可用装饰</div>';
             var decs = (playerData.items || []).filter(function (it) { return it.type === 'decoration'; });
             if (decs.length > 0) {
-                h += '<div class="flex-col-6">';
-                for (var i = 0; i < decs.length; i++) {
-                    var it = decs[i], pc = (playerData.decorations || []).filter(function (d) { return d.id === it.id; }).length, rem = it.count - pc;
-                    if (rem > 0) { h += '<div class="glass flex-between p-8"><div class="flex-gap-6" style="align-items:center;"><span style="font-size:20px;">' + (it.icon || '🎨') + '</span><div><div class="text-13 text-green">' + esc(it.name) + '</div><div class="text-muted">剩余 ' + rem + ' 个</div></div></div><button class="btn-td btn-green" onclick="placeDecoration(\'' + it.id + '\')">放置</button></div>'; }
+                h += secTitle('🎨', '农场装饰', '#a78bfa');
+                for (var di = 0; di < decs.length; di++) {
+                    var it = decs[di];
+                    var color = getItemRarityColor(it.rarity);
+                    var tag = it.unsalable ? '<span style="color:#ef4444;font-size:10px;border:1px solid #ef4444;padding:1px 3px;border-radius:3px;">非卖</span> ' : '';
+                    h += '<div class="shop-item"><div class="si-info"><div class="si-name" style="color:' + color + ';">' + (it.icon || '🎨') + ' ' + tag + esc(it.name) + ' (' + getItemRarityText(it.rarity) + ')</div><div class="si-desc">' + esc(it.desc || '') + '</div></div><span class="si-price">💰' + it.price + '</span><button onclick="doBuy(\'' + it.id + '\',1)">购买</button></div>';
                 }
-                h += '</div>';
             } else { h += '<div class="text-muted p-8">没有装饰物道具，可以去商店购买</div><button class="action-btn action-btn-gold w-full" style="margin-top:4px;" onclick="openShop()">🏪 去商店</button>'; }
             h += '</div>';
             document.getElementById('decorationsContent').innerHTML = h;
         }
         function placeDecoration(id) { doAction('place_decoration', { itemId: id, position: { x: 0, y: playerData.decorations ? playerData.decorations.length : 0 } }); setTimeout(function () { renderDecorationsPanel(); refreshFarm(); }, 300); }
         function removeDecoration(id) { if (!confirm('确定收起这个装饰物？')) return; doAction('remove_decoration', { decorationId: id }); setTimeout(function () { renderDecorationsPanel(); refreshFarm(); }, 300); }
+
+        // ===== 装饰品长按拖拽排序逻辑 =====
+        var _dragTimer = null, _dragEl = null, _ghostEl = null;
+        var _startX = 0, _startY = 0;
+
+        function initDecorationDrag() {
+            var items = document.querySelectorAll('#decorationsGrid .decoration-item');
+            items.forEach(function (item) {
+                // 触摸端
+                item.addEventListener('touchstart', handleDragStart, { passive: false });
+                item.addEventListener('touchmove', handleDragMove, { passive: false });
+                item.addEventListener('touchend', handleDragEnd);
+                item.addEventListener('touchcancel', handleDragEnd);
+                // 电脑端
+                item.addEventListener('mousedown', handleDragStart);
+            });
+            document.addEventListener('mousemove', handleDragMove, { passive: false });
+            document.addEventListener('mouseup', handleDragEnd);
+        }
+
+        function handleDragStart(e) {
+            // 如果点的是删除按钮，不触发拖拽
+            if (e.target.classList.contains('decoration-remove-btn')) return;
+            var touch = e.touches ? e.touches[0] : e;
+            _startX = touch.clientX;
+            _startY = touch.clientY;
+            var target = this;
+
+            // 长按 350 毫秒后触发拖拽
+            _dragTimer = setTimeout(function () {
+                startDragging(target, touch);
+            }, 350);
+        }
+
+        function startDragging(el, touch) {
+            _dragEl = el;
+            _dragEl.classList.add('dragging');
+            // 创建跟随手指的幽灵元素
+            _ghostEl = el.cloneNode(true);
+            _ghostEl.classList.add('decoration-ghost');
+            _ghostEl.classList.remove('decoration-item');
+            var btn = _ghostEl.querySelector('.decoration-remove-btn');
+            if (btn) btn.remove(); // 幽灵元素不需要删除按钮
+            document.body.appendChild(_ghostEl);
+            updateGhostPos(touch);
+
+            // 手机震动反馈 (支持的设备上)
+            if (playerData && playerData.settings && playerData.settings.vibrate && navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        function handleDragMove(e) {
+            var touch = e.touches ? e.touches[0] : e;
+            if (!_dragEl) {
+                // 如果还没触发长按，手指就滑动了，说明玩家在滚动页面，取消长按倒计时
+                if (Math.abs(touch.clientX - _startX) > 10 || Math.abs(touch.clientY - _startY) > 10) {
+                    clearTimeout(_dragTimer);
+                }
+                return;
+            }
+            e.preventDefault(); // 开始拖拽后，阻止页面滚动
+            updateGhostPos(touch);
+
+            // 检测手指下方的元素，实现位置交换
+            var targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (targetEl) {
+                var dropTarget = targetEl.closest('.decoration-item');
+                if (dropTarget && dropTarget !== _dragEl) {
+                    var grid = document.getElementById('decorationsGrid');
+                    var rect = dropTarget.getBoundingClientRect();
+                    // 判断是插入到前面还是后面
+                    var next = (touch.clientX - rect.left) / (rect.right - rect.left) > 0.5;
+                    grid.insertBefore(_dragEl, next ? dropTarget.nextSibling : dropTarget);
+                }
+            }
+        }
+
+        function updateGhostPos(touch) {
+            if (_ghostEl) {
+                _ghostEl.style.left = (touch.clientX - (_ghostEl.offsetWidth / 2)) + 'px';
+                _ghostEl.style.top = (touch.clientY - (_ghostEl.offsetHeight / 2)) + 'px';
+            }
+        }
+
+        function handleDragEnd(e) {
+            clearTimeout(_dragTimer);
+            if (!_dragEl) return;
+
+            _dragEl.classList.remove('dragging');
+            if (_ghostEl) {
+                _ghostEl.remove();
+                _ghostEl = null;
+            }
+
+            // 拖拽结束，提取新的排序数组并发送给服务器
+            var gridItems = document.querySelectorAll('#decorationsGrid .decoration-item');
+            var newOrder = [];
+            gridItems.forEach(function (item) {
+                newOrder.push(parseInt(item.getAttribute('data-index')));
+            });
+
+            _dragEl = null;
+            // 向服务器发送新的排列顺序
+            doAction('move_decoration', { newOrder: newOrder });
+        }
 
         // 周挑战
         function openWeeklyChallenge() {
@@ -3513,7 +3735,15 @@
             if (animals.length > 0) { for (var ai = 0; ai < animals.length; ai++) { var a = animals[ai]; h += '<div class="inv-item" title="' + esc(a.name) + ' 售价💰' + a.sellPrice + '"><span class="ii-icon">' + (a.icon || '🐾') + '</span><span class="ii-name">' + esc(a.name) + '</span><span class="ii-count">x' + a.count + ' (💰' + a.sellPrice + ')</span></div>'; } }
             else h += '<div class="inv-empty">没有动物</div>';
             h += '</div></div><div class="inv-section"><div class="inv-section-title">🧰 道具</div><div class="inv-grid">';
-            if (items && items.length > 0) { for (var k = 0; k < items.length; k++) { var it = items[k]; h += '<div class="inv-item" title="' + esc(it.desc || '') + '"><span class="ii-icon">' + (it.icon || (it.type === 'feed' ? '🥡' : '🧪')) + '</span><span class="ii-name">' + esc(it.name) + '</span><span class="ii-count">x' + it.count + '</span></div>'; } }
+            if (items && items.length > 0) {
+                for (var k = 0; k < items.length; k++) {
+                    var it = items[k];
+                    var isDeco = it.type === 'decoration';
+                    var color = isDeco ? getItemRarityColor(it.rarity) : '#aaa';
+                    var tag = it.unsalable ? '<span style="color:#ef4444;font-size:9px;">[非卖]</span> ' : '';
+                    h += '<div class="inv-item" title="' + esc(it.desc || '') + '\n' + (isDeco ? '品质:' + getItemRarityText(it.rarity) : '') + '"><span class="ii-icon">' + (it.icon || (it.type === 'feed' ? '🥡' : '🧪')) + '</span><span class="ii-name" style="color:' + color + '">' + tag + esc(it.name) + '</span><span class="ii-count">x' + it.count + '</span></div>';
+                }
+            }
             else h += '<div class="inv-empty">没有道具</div>';
             h += '</div></div>'; document.getElementById('invContent').innerHTML = h;
         }
@@ -3862,20 +4092,20 @@
         function appendMsg(el) { var a = document.getElementById('msgArea'); a.appendChild(el); while (a.children.length > 100) a.removeChild(a.firstChild); if (!_scrollPending) { _scrollPending = true; requestAnimationFrame(function () { a.scrollTop = a.scrollHeight; _scrollPending = false; }); } }
 
         // 宠物
-        function openPets(noLoading) { 
+        function openPets(noLoading) {
             // 如果 noLoading 为真，则不显示加载占位符，防止页面闪烁跳动
             if (!noLoading) {
-                document.getElementById('petsContent').innerHTML = loadingPlaceholder(); 
+                document.getElementById('petsContent').innerHTML = loadingPlaceholder();
             }
-            openPanel('panelPets'); 
-            doAction('my_pets'); 
+            openPanel('panelPets');
+            doAction('my_pets');
         }
 
         function getRarityLabel(r) { var m = { 'common': '<span class="rarity-common">普通</span>', 'uncommon': '<span class="rarity-uncommon">优秀</span>', 'rare': '<span class="rarity-rare">稀有</span>', 'epic': '<span class="rarity-epic">史诗</span>', 'legendary': '<span class="rarity-legendary">传说</span>' }; return m[r] || m.common; }
         function getRarityText(r) { var m = { 'common': '普通', 'uncommon': '优秀', 'rare': '稀有', 'epic': '史诗', 'legendary': '传说' }; return m[r] || '普通'; }
         function getMoodColor(m) { return m >= 70 ? '#4caf50' : m >= 40 ? '#fbbf24' : '#ef4444'; }
         function getMoodText(m) { return m >= 80 ? '😊 开心' : m >= 60 ? '🙂 不错' : m >= 40 ? '😐 一般' : m >= 20 ? '😟 低落' : '😢 难过'; }
-        
+
         function renderPetsPanel(pets) {
             var h = '';
             if (!pets || pets.length === 0) { h += '<div class="text-center p-12" style="color:#4a5a4a;"><div style="font-size:36px;margin-bottom:10px;">🐾</div><div class="text-13">还没有宠物</div><div class="text-muted" style="margin-top:4px;">去野外捕捉或商店购买吧</div></div>'; }
@@ -3894,18 +4124,18 @@
             }
             document.getElementById('petsContent').innerHTML = h;
             if (window._petsScrollRestore !== undefined) {
-                setTimeout(function() {
+                setTimeout(function () {
                     var petsBox = document.querySelector('#panelPets .panel-box');
                     if (petsBox) {
                         petsBox.scrollTop = window._petsScrollRestore;
                     }
-                    window._petsScrollRestore = undefined; 
-                    }, 10);
+                    window._petsScrollRestore = undefined;
+                }, 10);
             }
         }
         function openPetDetail(pid) {
-            if (!playerData || !playerData.pets) return; 
-            var pet = playerData.pets.find(function (p) { return p.id === pid; }); 
+            if (!playerData || !playerData.pets) return;
+            var pet = playerData.pets.find(function (p) { return p.id === pid; });
             if (!pet) return;
 
             // 在关闭我的宠物面板前，记录当前的滑动条位置
@@ -3925,20 +4155,20 @@
             h += '<div class="glass text-center p-10"><div class="text-muted">价值</div><div style="font-size:14px;color:#fcd34d;margin-top:2px;">💰' + (pet.value || 0) + '</div></div>';
             h += '<div class="glass text-center p-10"><div class="text-muted">探险次数</div><div style="font-size:14px;color:#67e8f9;margin-top:2px;">🗺️ ' + (pet.totalAdventures || 0) + '</div></div>';
             h += '<div class="glass text-center p-10"><div class="text-muted">获得时间</div><div class="text-11" style="color:#7a9a7a;margin-top:4px;">' + new Date(pet.createdAt).toLocaleDateString() + '</div></div></div>';
-            h += '<div class="flex-col-6">';            
+            h += '<div class="flex-col-6">';
             if (advReady) h += '<button class="action-btn action-btn-solid-green w-full" style="padding:12px;font-size:14px;" onclick="doPetCollect(\'' + pet.id + '\')">🎁 领取寻宝奖励</button>';
             else if (onAdv) { var rm2 = Math.ceil((pet.adventureEndTime - now) / 60000); h += '<div class="glass text-center p-12 text-13 text-gold">🗺️ 寻宝中... 还需' + rm2 + '分钟</div>'; }
-            else h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doPetAdventure(\'' + pet.id + '\')">🗺️ 派出寻宝（15分钟）</button>';            
+            else h += '<button class="action-btn action-btn-gold w-full" style="padding:10px;" onclick="doPetAdventure(\'' + pet.id + '\')">🗺️ 派出寻宝（15分钟）</button>';
             h += '<button class="action-btn action-btn-purple w-full" style="padding:10px;" onclick="doPetInteract(\'' + pet.id + '\')">❤️ 互动（心情+15）</button>';
             h += '<button class="action-btn action-btn-cyan w-full" style="padding:10px;" onclick="doPetRename(\'' + pet.id + '\')">✏️ 改名</button>';
             h += '<button class="action-btn action-btn-red w-full" style="padding:10px;" onclick="doPetRelease(\'' + pet.id + '\')">🕊️ 放生（回收一半价值）</button>';
             h += '<button class="action-btn w-full" style="padding:10px; background:rgba(255,255,255,0.05); color:#aaa; margin-top:8px; border:1px solid rgba(255,255,255,0.1);" onclick="closePanel(\'panelPetDetail\'); openPets(true);">🔙 返回宠物列表</button></div>';
-            document.getElementById('petDetailContent').innerHTML = h; 
+            document.getElementById('petDetailContent').innerHTML = h;
             openPanel('panelPetDetail');
 
             var closeBtn = document.querySelector('#panelPetDetail .panel-close');
             if (closeBtn) {
-                closeBtn.onclick = function() {
+                closeBtn.onclick = function () {
                     closePanel('panelPetDetail');
                     openPets(true);
                 };
@@ -3948,18 +4178,18 @@
         function doPetAdventure(id) { doAction('pet_adventure', { petId: id }); }
         function doPetCollect(id) { doAction('pet_collect', { petId: id }); }
         function doPetInteract(id) { doAction('pet_interact', { petId: id }); }
-        function doPetRename(id) { 
-            var n = prompt('给宠物起个新名字（1-12字）：'); 
-            if (!n || !n.trim()) return; 
-            doAction('rename_pet', { petId: id, name: n.trim() }); 
-            closePanel('panelPetDetail'); 
-            openPets(true); 
+        function doPetRename(id) {
+            var n = prompt('给宠物起个新名字（1-12字）：');
+            if (!n || !n.trim()) return;
+            doAction('rename_pet', { petId: id, name: n.trim() });
+            closePanel('panelPetDetail');
+            openPets(true);
         }
-        function doPetRelease(id) { 
-            if (!confirm('确定放生这只宠物？将获得一半价值的金币。')) return; 
-            doAction('release_pet', { petId: id }); 
-            closePanel('panelPetDetail'); 
-            openPets(true); 
+        function doPetRelease(id) {
+            if (!confirm('确定放生这只宠物？将获得一半价值的金币。')) return;
+            doAction('release_pet', { petId: id });
+            closePanel('panelPetDetail');
+            openPets(true);
         }
 
         // 邮件
@@ -4130,12 +4360,24 @@
             if (currentWorld) h += '<div class="text-11" style="color:#4a5a4a;margin-top:6px;">当前世界: ' + esc(currentWorld.name) + '</div>';
             h += '</div><div class="settings-section"><div class="settings-section-title">👑 我的称号</div>';
             h += '<button class="btn-td btn-green w-full" style="padding:10px;border-radius:20px;" onclick="openTitleSelect()">📜 选择称号</button></div>';
-            h += '<div class="settings-section"><div class="settings-section-title">⚙️ 游戏设置</div><div class="settings-placeholder"><div style="font-size:24px;margin-bottom:8px;">🔧</div><div>更多设置即将推出</div><div class="text-11" style="color:#2a3a2a;margin-top:4px;">音效、通知、界面主题...</div></div></div>';
+            h += '<div class="settings-section"><div class="settings-section-title">⚙️ 声音与震动</div>';
+            // 震动
+            var isVibrate = playerData && playerData.settings && playerData.settings.vibrate;
+            h += '<div class="glass flex-between p-12 mb-8">';
+            h += '<div><div class="text-13 text-green">📳 设备震动</div><div class="text-11 text-muted" style="margin-top:2px;">长按、交互时的触觉反馈</div></div>';
+            h += '<label class="switch"><input type="checkbox" id="settingVibrate" ' + (isVibrate ? 'checked' : '') + ' onchange="updateSettings()"><span class="slider"></span></label>';
+            h += '</div>';
+            h += '</div>';
             h += '<div style="margin-top:20px;"><button class="action-btn action-btn-red w-full" style="padding:12px;font-size:14px;font-weight:600;" onclick="exitWorld()">🚪 退出当前世界</button></div>';
             document.getElementById('settingsContent').innerHTML = h;
         }
+        // 发送设置到服务器
+        function updateSettings() {
+            var vibrate = document.getElementById('settingVibrate').checked;
+            doAction('update_settings', { settings: { vibrate: vibrate } });
+        }
         function openTitleSelect() { renderTitleSelectPanel(); openPanel('panelTitleSelect'); }
-         function renderTitleSelectPanel() {
+        function renderTitleSelectPanel() {
             var h = '';
             if (!playerData || !playerData.titles || playerData.titles.length === 0) h += '<div class="text-center p-12" style="color:#5a7a5a;">你还没有获得任何称号</div>';
             else {
@@ -4290,4 +4532,3 @@
 </body>
 
 </html>
-
