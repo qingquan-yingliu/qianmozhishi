@@ -2807,6 +2807,15 @@
                             updMoney();
                         }
                         if (msg.items && playerData) playerData.items = msg.items;
+                        if (msg.decorations && playerData) {
+                            playerData.decorations = msg.decorations;
+                            // 刷新主界面装饰区
+                            renderDecorationsArea(playerData.decorations, false); 
+                            // 如果装饰面板是打开的，也刷新它
+                            if (document.getElementById('panelDecorations').classList.contains('show')) {
+                                renderDecorationsPanel();
+                            }
+                        }
                         if (document.getElementById('panelSell').classList.contains('show')) {
                             window._noLoadingRender = true;
                             doAction('inventory');
@@ -3344,14 +3353,16 @@
             h += '</div><div class="mb-12"><div class="text-12 text-gold mb-6">📦 可用装饰</div>';
             var decs = (playerData.items || []).filter(function (it) { return it.type === 'decoration'; });
             if (decs.length > 0) {
-                h += secTitle('🎨', '农场装饰', '#a78bfa');
+                h += '<div class="text-12 fw-600" style="color:#a78bfa;margin:10px 0 6px;border-bottom:1px solid rgba(255,255,255,0.04);padding-bottom:4px;">🎨 农场装饰</div>';
                 for (var di = 0; di < decs.length; di++) {
                     var it = decs[di];
                     var color = getItemRarityColor(it.rarity);
                     var tag = it.unsalable ? '<span style="color:#ef4444;font-size:10px;border:1px solid #ef4444;padding:1px 3px;border-radius:3px;">非卖</span> ' : '';
-                    h += '<div class="shop-item"><div class="si-info"><div class="si-name" style="color:' + color + ';">' + (it.icon || '🎨') + ' ' + tag + esc(it.name) + ' (' + getItemRarityText(it.rarity) + ')</div><div class="si-desc">' + esc(it.desc || '') + '</div></div><span class="si-price">💰' + it.price + '</span><button onclick="doBuy(\'' + it.id + '\',1)">购买</button></div>';
+                    h += '<div class="shop-item"><div class="si-info"><div class="si-name" style="color:' + color + ';">' + (it.icon || '🎨') + ' ' + tag + esc(it.name) + ' (' + getItemRarityText(it.rarity) + ')</div><div class="si-desc">' + esc(it.desc || '') + '</div></div><span class="si-price" style="color:#a5d6a7;">拥有: x' + it.count + '</span><button class="action-btn-green" onclick="placeDecoration(\'' + it.id + '\')">放置</button></div>';
                 }
-            } else { h += '<div class="text-muted p-8">没有装饰物道具，可以去商店购买</div><button class="action-btn action-btn-gold w-full" style="margin-top:4px;" onclick="openShop()">🏪 去商店</button>'; }
+            } else { 
+                h += '<div class="text-muted p-8">没有装饰物道具，可以去商店购买</div><button class="action-btn action-btn-gold w-full" style="margin-top:4px;" onclick="openShop()">🏪 去商店</button>'; 
+            }
             h += '</div>';
             document.getElementById('decorationsContent').innerHTML = h;
         }
@@ -3380,6 +3391,8 @@
         function handleDragStart(e) {
             // 如果点的是删除按钮，不触发拖拽
             if (e.target.classList.contains('decoration-remove-btn')) return;
+             if (_dragEl) return;
+              clearTimeout(_dragTimer);
             var touch = e.touches ? e.touches[0] : e;
             _startX = touch.clientX;
             _startY = touch.clientY;
@@ -3392,6 +3405,11 @@
         }
 
         function startDragging(el, touch) {
+            if (_dragEl) return;
+            if (_ghostEl) {
+                _ghostEl.remove();
+                _ghostEl = null;
+            }
             _dragEl = el;
             _dragEl.classList.add('dragging');
             // 创建跟随手指的幽灵元素
